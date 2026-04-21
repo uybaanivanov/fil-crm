@@ -144,7 +144,7 @@
                     ['Район', apt.district || '—'],
                     ['Цена/ночь', fmtRub(apt.price_per_night)],
                     ['Нужна уборка', apt.needs_cleaning ? 'Да' : 'Нет']
-                ] as [k, v], i, arr}
+                ] as [k, v], i}
                     <div class="ch-row" class:last={i === 5}>
                         <span class="ch-key">{k}</span>
                         <span class="ch-val">{v}</span>
