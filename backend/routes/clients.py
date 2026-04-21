@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 from backend.auth import require_role
 from backend.db import get_conn
+from backend.lib.stats import parse_date
 
 router = APIRouter(prefix="/clients", tags=["clients"])
 
@@ -92,3 +93,36 @@ def delete_client(client_id: int, _: dict = Depends(require_role("owner", "admin
             detail="Нельзя удалить клиента с привязанными бронями",
         )
     return None
+
+
+@router.get("/{client_id}")
+def get_client(
+    client_id: int, _: dict = Depends(require_role("owner", "admin"))
+):
+    with get_conn() as conn:
+        row = _row(conn, client_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Клиент не найден")
+        bookings = conn.execute(
+            """
+            SELECT b.id, b.check_in, b.check_out, b.total_price, b.status,
+                   a.title AS apartment_title, a.id AS apartment_id
+            FROM bookings b JOIN apartments a ON a.id = b.apartment_id
+            WHERE b.client_id = ?
+            ORDER BY b.check_in DESC
+            """,
+            (client_id,),
+        ).fetchall()
+    bookings = [dict(b) for b in bookings]
+    nights = sum(
+        (parse_date(b["check_out"]) - parse_date(b["check_in"])).days
+        for b in bookings
+        if b["status"] != "cancelled"
+    )
+    active_count = sum(1 for b in bookings if b["status"] != "cancelled")
+    revenue = sum(b["total_price"] for b in bookings if b["status"] != "cancelled")
+    return {
+        **dict(row),
+        "bookings": bookings,
+        "stats": {"count": active_count, "nights": nights, "revenue": revenue},
+    }
