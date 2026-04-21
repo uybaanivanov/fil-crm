@@ -8,6 +8,7 @@ from backend.routes import auth as auth_routes
 from backend.routes import users as users_routes
 from backend.routes import apartments as apartments_routes
 from backend.routes import clients as clients_routes
+from backend.routes import bookings as bookings_routes
 
 
 @asynccontextmanager
@@ -30,6 +31,7 @@ app.include_router(auth_routes.router)
 app.include_router(users_routes.router)
 app.include_router(apartments_routes.router)
 app.include_router(clients_routes.router)
+app.include_router(bookings_routes.router)
 
 
 @app.get("/health")
