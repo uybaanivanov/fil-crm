@@ -1,14 +1,21 @@
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent.parent / "db.sqlite3"
+_DEFAULT_DB = Path(__file__).resolve().parent.parent / "db.sqlite3"
+
+
+def _db_path() -> Path:
+    return Path(os.environ.get("FIL_DB_PATH", str(_DEFAULT_DB)))
+
+
 MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 
 
 @contextmanager
 def get_conn():
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(_db_path()))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     try:
