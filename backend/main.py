@@ -11,6 +11,7 @@ from backend.routes import clients as clients_routes
 from backend.routes import bookings as bookings_routes
 from backend.routes import dashboard as dashboard_routes
 from backend.routes import reports as reports_routes
+from backend.routes import expenses as expenses_routes
 
 
 @asynccontextmanager
@@ -40,6 +41,7 @@ app.include_router(clients_routes.router)
 app.include_router(bookings_routes.router)
 app.include_router(dashboard_routes.router)
 app.include_router(reports_routes.router)
+app.include_router(expenses_routes.router)
 
 
 @app.get("/health")
