@@ -111,7 +111,7 @@ def get_apartment(
     with get_conn() as conn:
         row = _row(conn, apt_id)
     if row is None:
-        raise HTTPException(status_code=404, detail="Квартира не найдена")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Квартира не найдена")
     return dict(row)
 
 
@@ -134,7 +134,7 @@ def apartment_stats(
     dim = days_in_month(month)
     with get_conn() as conn:
         if _row(conn, apt_id) is None:
-            raise HTTPException(status_code=404, detail="Квартира не найдена")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Квартира не найдена")
         rows = conn.execute(
             "SELECT check_in, check_out, total_price, status FROM bookings WHERE apartment_id = ?",
             (apt_id,),

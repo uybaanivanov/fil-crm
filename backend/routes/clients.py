@@ -102,7 +102,7 @@ def get_client(
     with get_conn() as conn:
         row = _row(conn, client_id)
         if row is None:
-            raise HTTPException(status_code=404, detail="Клиент не найден")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Клиент не найден")
         bookings = conn.execute(
             """
             SELECT b.id, b.check_in, b.check_out, b.total_price, b.status,

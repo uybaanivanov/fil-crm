@@ -235,5 +235,5 @@ def get_booking(
     with get_conn() as conn:
         row = _row(conn, booking_id)
     if row is None:
-        raise HTTPException(status_code=404, detail="Бронь не найдена")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Бронь не найдена")
     return dict(row)

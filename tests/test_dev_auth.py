@@ -36,3 +36,5 @@ def test_dev_auth_gated_by_debug(monkeypatch, tmp_db):
     with TestClient(main_mod.app) as c:
         r = c.get("/dev_auth/users")
         assert r.status_code == 404
+        r = c.post("/dev_auth/login", json={"user_id": 1})
+        assert r.status_code == 404

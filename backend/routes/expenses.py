@@ -70,7 +70,7 @@ def update_expense(
 ):
     fields = payload.model_dump(exclude_unset=True)
     if not fields:
-        raise HTTPException(status_code=400, detail="Нет полей для обновления")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Нет полей для обновления")
     set_clause = ", ".join(f"{k} = ?" for k in fields)
     with get_conn() as conn:
         cur = conn.execute(
@@ -78,7 +78,7 @@ def update_expense(
             list(fields.values()) + [eid],
         )
         if cur.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Расход не найден")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Расход не найден")
         row = _row(conn, eid)
     return dict(row)
 
@@ -88,5 +88,5 @@ def delete_expense(eid: int, _: dict = Depends(require_role("owner", "admin"))):
     with get_conn() as conn:
         cur = conn.execute("DELETE FROM expenses WHERE id = ?", (eid,))
     if cur.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Расход не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Расход не найден")
     return None
