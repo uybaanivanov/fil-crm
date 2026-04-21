@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.db import apply_migrations
 from backend.routes import auth as auth_routes
 from backend.routes import users as users_routes
+from backend.routes import apartments as apartments_routes
 
 
 @asynccontextmanager
@@ -26,6 +27,7 @@ app.add_middleware(
 
 app.include_router(auth_routes.router)
 app.include_router(users_routes.router)
+app.include_router(apartments_routes.router)
 
 
 @app.get("/health")
