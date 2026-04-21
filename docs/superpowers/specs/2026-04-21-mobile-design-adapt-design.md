@@ -251,5 +251,5 @@ frontend/src/
 ## Status
 
 - [x] Backend (план 1/3) — готов 2026-04-21
-- [ ] Frontend foundation + core screens (план 2/3)
+- [x] Frontend foundation + core screens (план 2/3) — готов 2026-04-21
 - [ ] Frontend remaining screens (план 3/3)
