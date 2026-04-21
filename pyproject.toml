@@ -1,0 +1,10 @@
+[project]
+name = "fil-crm"
+version = "0.1.0"
+description = "CRM для посуточной аренды в Якутске"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.136.0",
+    "uvicorn>=0.30.0",
+]
