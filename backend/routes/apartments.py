@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from backend.auth import require_role
@@ -11,19 +11,33 @@ class ApartmentIn(BaseModel):
     title: str = Field(min_length=1)
     address: str = Field(min_length=1)
     price_per_night: int = Field(gt=0)
+    rooms: str | None = None
+    area_m2: int | None = Field(default=None, gt=0)
+    floor: str | None = None
+    district: str | None = None
+    cover_url: str | None = None
 
 
 class ApartmentPatch(BaseModel):
     title: str | None = Field(default=None, min_length=1)
     address: str | None = Field(default=None, min_length=1)
     price_per_night: int | None = Field(default=None, gt=0)
+    rooms: str | None = None
+    area_m2: int | None = Field(default=None, gt=0)
+    floor: str | None = None
+    district: str | None = None
+    cover_url: str | None = None
+
+
+SELECT_FIELDS = (
+    "id, title, address, price_per_night, needs_cleaning, "
+    "cover_url, rooms, area_m2, floor, district, created_at"
+)
 
 
 def _row(conn, apt_id: int):
     return conn.execute(
-        "SELECT id, title, address, price_per_night, needs_cleaning, created_at "
-        "FROM apartments WHERE id = ?",
-        (apt_id,),
+        f"SELECT {SELECT_FIELDS} FROM apartments WHERE id = ?", (apt_id,)
     ).fetchone()
 
 
@@ -31,8 +45,7 @@ def _row(conn, apt_id: int):
 def list_apartments(_: dict = Depends(require_role("owner", "admin"))):
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT id, title, address, price_per_night, needs_cleaning, created_at "
-            "FROM apartments ORDER BY id"
+            f"SELECT {SELECT_FIELDS} FROM apartments ORDER BY id"
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -43,20 +56,33 @@ def list_apartments_needing_cleaning(
 ):
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT id, title, address, price_per_night, needs_cleaning, created_at "
-            "FROM apartments WHERE needs_cleaning = 1 ORDER BY id"
+            f"SELECT {SELECT_FIELDS} FROM apartments WHERE needs_cleaning = 1 ORDER BY id"
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+@router.get("/{apt_id}")
+def get_apartment(
+    apt_id: int, _: dict = Depends(require_role("owner", "admin"))
+):
+    with get_conn() as conn:
+        row = _row(conn, apt_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Квартира не найдена")
+    return dict(row)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_apartment(
     payload: ApartmentIn, _: dict = Depends(require_role("owner", "admin"))
 ):
+    fields = payload.model_dump()
+    cols = ", ".join(fields.keys())
+    placeholders = ", ".join("?" * len(fields))
     with get_conn() as conn:
         cur = conn.execute(
-            "INSERT INTO apartments (title, address, price_per_night) VALUES (?, ?, ?)",
-            (payload.title, payload.address, payload.price_per_night),
+            f"INSERT INTO apartments ({cols}) VALUES ({placeholders})",
+            list(fields.values()),
         )
         row = _row(conn, cur.lastrowid)
     return dict(row)
@@ -68,7 +94,7 @@ def update_apartment(
     payload: ApartmentPatch,
     _: dict = Depends(require_role("owner", "admin")),
 ):
-    fields = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if v is not None}
+    fields = payload.model_dump(exclude_unset=True)
     if not fields:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Нет полей для обновления"
