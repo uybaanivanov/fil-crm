@@ -33,3 +33,13 @@ export const api = {
     patch:  (path, body, opts) => request('PATCH',  path, body,      opts),
     delete: (path, opts)       => request('DELETE', path, undefined, opts)
 };
+
+// Helper: определить, жив ли dev-picker. Не бросает — возвращает bool.
+export async function isDevPickerAvailable() {
+    try {
+        const res = await fetch(`${BASE}/dev_auth/users`);
+        return res.ok;
+    } catch {
+        return false;
+    }
+}
