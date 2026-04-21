@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from backend.db import get_conn
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/dev_auth", tags=["dev_auth"])
 
 
 class LoginIn(BaseModel):
@@ -23,7 +23,8 @@ def list_users_for_login():
 def login(payload: LoginIn):
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT id, full_name, role FROM users WHERE id = ?", (payload.user_id,)
+            "SELECT id, full_name, role FROM users WHERE id = ?",
+            (payload.user_id,),
         ).fetchone()
     if row is None:
         raise HTTPException(

@@ -1,10 +1,10 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.db import apply_migrations
-from backend.routes import auth as auth_routes
 from backend.routes import users as users_routes
 from backend.routes import apartments as apartments_routes
 from backend.routes import clients as clients_routes
@@ -27,7 +27,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_routes.router)
+if os.environ.get("DEBUG"):
+    from backend.routes import dev_auth as dev_auth_routes
+
+    app.include_router(dev_auth_routes.router)
+
 app.include_router(users_routes.router)
 app.include_router(apartments_routes.router)
 app.include_router(clients_routes.router)
