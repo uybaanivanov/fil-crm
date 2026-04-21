@@ -22,7 +22,19 @@ def get_conn():
 
 
 def apply_migrations() -> None:
-    files = sorted(MIGRATIONS_DIR.glob("*.sql"))
     with get_conn() as conn:
-        for f in files:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS _schema_migrations ("
+            "name TEXT PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT (datetime('now')))"
+        )
+        applied = {
+            r["name"]
+            for r in conn.execute("SELECT name FROM _schema_migrations").fetchall()
+        }
+        for f in sorted(MIGRATIONS_DIR.glob("*.sql")):
+            if f.name in applied:
+                continue
             conn.executescript(f.read_text(encoding="utf-8"))
+            conn.execute(
+                "INSERT INTO _schema_migrations(name) VALUES (?)", (f.name,)
+            )
