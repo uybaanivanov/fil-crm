@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, model_validator
 
 from backend.auth import require_role
@@ -189,3 +189,51 @@ def delete_booking(booking_id: int, _: dict = Depends(require_role("owner", "adm
             status_code=status.HTTP_404_NOT_FOUND, detail="Бронь не найдена"
         )
     return None
+
+
+@router.get("/calendar")
+def bookings_calendar(
+    from_: str = Query(..., alias="from", pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    to: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    _: dict = Depends(require_role("owner", "admin")),
+):
+    with get_conn() as conn:
+        apartments = conn.execute(
+            "SELECT id, title FROM apartments ORDER BY id"
+        ).fetchall()
+        bookings = conn.execute(
+            """
+            SELECT b.id, b.apartment_id, b.check_in, b.check_out, b.status,
+                   c.full_name AS client_name
+            FROM bookings b
+            JOIN clients c ON c.id = b.client_id
+            WHERE b.status != 'cancelled'
+              AND b.check_in < ? AND b.check_out > ?
+            ORDER BY b.check_in
+            """,
+            (to, from_),
+        ).fetchall()
+    buckets = {a["id"]: {"apartment_id": a["id"], "apartment_title": a["title"], "bookings": []}
+               for a in apartments}
+    for b in bookings:
+        buckets[b["apartment_id"]]["bookings"].append(
+            {
+                "id": b["id"],
+                "client_name": b["client_name"],
+                "check_in": b["check_in"],
+                "check_out": b["check_out"],
+                "status": b["status"],
+            }
+        )
+    return list(buckets.values())
+
+
+@router.get("/{booking_id}")
+def get_booking(
+    booking_id: int, _: dict = Depends(require_role("owner", "admin"))
+):
+    with get_conn() as conn:
+        row = _row(conn, booking_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Бронь не найдена")
+    return dict(row)
