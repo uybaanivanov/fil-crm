@@ -29,12 +29,13 @@
     <p class="sub">Войдите, чтобы управлять квартирами, бронями и уборкой.</p>
 
     <form onsubmit={submit}>
-        <label class="field-label">Телефон или e-mail</label>
-        <input type="email" bind:value={email} class="field" />
+        <label class="field-label" for="login-email">Телефон или e-mail</label>
+        <input id="login-email" type="email" bind:value={email} class="field" />
 
-        <label class="field-label">Пароль</label>
+        <label class="field-label" for="login-pass">Пароль</label>
         <div class="pass-wrap">
             <input
+                id="login-pass"
                 type={showPass ? 'text' : 'password'}
                 bind:value={password}
                 class="field pass-input"
@@ -45,7 +46,7 @@
             </button>
         </div>
 
-        <a href="#" class="forgot">Забыли пароль?</a>
+        <button type="button" class="forgot">Забыли пароль?</button>
 
         <button type="submit" class="primary-btn">Войти →</button>
     </form>
@@ -149,6 +150,11 @@
         color: var(--accent);
         font-weight: 500;
         margin-bottom: 24px;
+        background: transparent;
+        border: none;
+        padding: 0;
+        text-align: left;
+        cursor: pointer;
     }
     .primary-btn {
         height: 50px;

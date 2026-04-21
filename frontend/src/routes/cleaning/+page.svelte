@@ -49,7 +49,13 @@
 {:else}
     <div class="list">
         {#each apartments as a}
-            <button class="task" onclick={() => goto(`/apartments/${a.id}`)} type="button">
+            <div
+                class="task"
+                role="button"
+                tabindex="0"
+                onclick={() => goto(`/apartments/${a.id}`)}
+                onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') goto(`/apartments/${a.id}`); }}
+            >
                 <div class="top">
                     <div class="addr-wrap">
                         <div class="title">{a.title}</div>
@@ -68,7 +74,7 @@
                         Закрыть уборку ✓
                     </button>
                 </div>
-            </button>
+            </div>
         {/each}
     </div>
 {/if}
