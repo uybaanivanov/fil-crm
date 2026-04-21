@@ -68,3 +68,75 @@ def test_get_apartment_by_id_404(client):
     u = _owner(client)
     r = client.get("/apartments/9999", headers=auth(u["id"]))
     assert r.status_code == 404
+
+
+def _apt_with_price(client, u_id: int, price: int) -> dict:
+    return client.post(
+        "/apartments",
+        headers=auth(u_id),
+        json={"title": "A", "address": "addr", "price_per_night": price},
+    ).json()
+
+
+def _client_and_booking(client, u_id: int, apt_id: int, ci: str, co: str, total: int, status_: str = "active"):
+    cl = client.post(
+        "/clients",
+        headers=auth(u_id),
+        json={"full_name": "Гость", "phone": "+7 000"},
+    ).json()
+    b = client.post(
+        "/bookings",
+        headers=auth(u_id),
+        json={
+            "apartment_id": apt_id,
+            "client_id": cl["id"],
+            "check_in": ci,
+            "check_out": co,
+            "total_price": total,
+        },
+    ).json()
+    if status_ != "active":
+        client.patch(f"/bookings/{b['id']}", headers=auth(u_id), json={"status": status_})
+    return b
+
+
+def test_apartment_stats_empty_month(client):
+    u = _owner(client)
+    apt = _apt_with_price(client, u["id"], 4000)
+    r = client.get(
+        f"/apartments/{apt['id']}/stats?month=2026-04", headers=auth(u["id"])
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["nights"] == 0
+    assert body["revenue"] == 0
+    assert body["adr"] == 0
+    assert body["utilization"] == 0.0
+
+
+def test_apartment_stats_one_booking(client):
+    u = _owner(client)
+    apt = _apt_with_price(client, u["id"], 4000)
+    _client_and_booking(client, u["id"], apt["id"], "2026-04-10", "2026-04-13", 12000)
+    r = client.get(
+        f"/apartments/{apt['id']}/stats?month=2026-04", headers=auth(u["id"])
+    )
+    body = r.json()
+    assert body["nights"] == 3
+    assert body["revenue"] == 12000
+    assert body["adr"] == 4000
+    # 3 / 30 = 0.1
+    assert abs(body["utilization"] - 0.1) < 1e-6
+
+
+def test_list_with_stats_includes_utilization_and_status(client):
+    u = _owner(client)
+    apt = _apt_with_price(client, u["id"], 4000)
+    _client_and_booking(client, u["id"], apt["id"], "2026-04-10", "2026-04-13", 12000)
+    r = client.get(
+        "/apartments?with_stats=1&month=2026-04", headers=auth(u["id"])
+    )
+    assert r.status_code == 200
+    row = next(a for a in r.json() if a["id"] == apt["id"])
+    assert row["utilization"] > 0
+    assert row["status"] in ("occupied", "free", "needs_cleaning")

@@ -42,12 +42,55 @@ def _row(conn, apt_id: int):
 
 
 @router.get("")
-def list_apartments(_: dict = Depends(require_role("owner", "admin"))):
+def list_apartments(
+    with_stats: int = Query(0),
+    month: str | None = Query(None, pattern=r"^\d{4}-\d{2}$"),
+    _: dict = Depends(require_role("owner", "admin")),
+):
     with get_conn() as conn:
         rows = conn.execute(
             f"SELECT {SELECT_FIELDS} FROM apartments ORDER BY id"
         ).fetchall()
-    return [dict(r) for r in rows]
+        apts = [dict(r) for r in rows]
+        if not with_stats:
+            return apts
+        from datetime import date
+
+        from backend.lib.stats import (
+            aggregate_bookings_in_period,
+            days_in_month,
+            month_bounds,
+        )
+
+        month = month or date.today().strftime("%Y-%m")
+        p_start, p_end = month_bounds(month)
+        dim = days_in_month(month)
+        today = date.today().isoformat()
+        for a in apts:
+            bookings = conn.execute(
+                "SELECT check_in, check_out, total_price, status FROM bookings WHERE apartment_id = ?",
+                (a["id"],),
+            ).fetchall()
+            bookings = [dict(b) for b in bookings]
+            agg = aggregate_bookings_in_period(bookings, p_start, p_end)
+            a["nights"] = agg["nights"]
+            a["revenue"] = agg["revenue"]
+            a["adr"] = agg["adr"]
+            a["utilization"] = round(agg["nights"] / dim, 4) if dim else 0.0
+            # Статус: если есть бронь где check_in<=today<check_out и status='active' — occupied;
+            # иначе если needs_cleaning=1 — needs_cleaning; иначе free.
+            is_occupied = any(
+                b["status"] == "active"
+                and b["check_in"] <= today < b["check_out"]
+                for b in bookings
+            )
+            if is_occupied:
+                a["status"] = "occupied"
+            elif a["needs_cleaning"]:
+                a["status"] = "needs_cleaning"
+            else:
+                a["status"] = "free"
+    return apts
 
 
 @router.get("/cleaning")
@@ -70,6 +113,36 @@ def get_apartment(
     if row is None:
         raise HTTPException(status_code=404, detail="Квартира не найдена")
     return dict(row)
+
+
+@router.get("/{apt_id}/stats")
+def apartment_stats(
+    apt_id: int,
+    month: str | None = Query(None, pattern=r"^\d{4}-\d{2}$"),
+    _: dict = Depends(require_role("owner", "admin")),
+):
+    from datetime import date
+
+    from backend.lib.stats import (
+        aggregate_bookings_in_period,
+        days_in_month,
+        month_bounds,
+    )
+
+    month = month or date.today().strftime("%Y-%m")
+    p_start, p_end = month_bounds(month)
+    dim = days_in_month(month)
+    with get_conn() as conn:
+        if _row(conn, apt_id) is None:
+            raise HTTPException(status_code=404, detail="Квартира не найдена")
+        rows = conn.execute(
+            "SELECT check_in, check_out, total_price, status FROM bookings WHERE apartment_id = ?",
+            (apt_id,),
+        ).fetchall()
+    bookings = [dict(r) for r in rows]
+    agg = aggregate_bookings_in_period(bookings, p_start, p_end)
+    agg["utilization"] = round(agg["nights"] / dim, 4) if dim else 0.0
+    return agg
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
