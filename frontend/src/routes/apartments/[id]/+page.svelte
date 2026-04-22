@@ -76,7 +76,6 @@
         baselineError = null;
         baselineErrorField = null;
         const rent = parseInt(baselineRent, 10);
-        const util = parseInt(baselineUtilities, 10);
         if (!rent || rent < 0) {
             baselineError = 'Укажи аренду';
             baselineErrorField = 'rent';
