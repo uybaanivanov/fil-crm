@@ -1,6 +1,6 @@
 import { getUser } from './auth.js';
 
-const BASE = 'http://localhost:8000';
+const BASE = import.meta.env.VITE_API_BASE ?? '/api';
 
 export class ApiError extends Error {
     constructor(status, detail) {
