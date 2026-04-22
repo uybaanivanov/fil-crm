@@ -38,6 +38,8 @@ class ApartmentPatch(BaseModel):
     cover_url: str | None = None
     source: str | None = None
     source_url: str | None = None
+    monthly_rent: int | None = Field(default=None, ge=0)
+    monthly_utilities: int | None = Field(default=None, ge=0)
 
 
 class CleaningDueIn(BaseModel):
@@ -258,16 +260,24 @@ def update_apartment(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Нет полей для обновления"
         )
-    set_clause = ", ".join(f"{k} = ?" for k in fields)
-    values = list(fields.values()) + [apt_id]
     with get_conn() as conn:
-        cur = conn.execute(
-            f"UPDATE apartments SET {set_clause} WHERE id = ?", values
-        )
-        if cur.rowcount == 0:
+        current = _row(conn, apt_id)
+        if current is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Квартира не найдена"
             )
+        merged_rent = fields.get("monthly_rent", current["monthly_rent"])
+        merged_util = fields.get("monthly_utilities", current["monthly_utilities"])
+        if merged_rent is None or merged_util is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="monthly_rent и monthly_utilities обязательны",
+            )
+        set_clause = ", ".join(f"{k} = ?" for k in fields)
+        values = list(fields.values()) + [apt_id]
+        conn.execute(
+            f"UPDATE apartments SET {set_clause} WHERE id = ?", values
+        )
         row = _row(conn, apt_id)
     return dict(row)
 

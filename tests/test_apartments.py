@@ -39,6 +39,8 @@ def test_patch_apartment_updates_new_fields(client):
             "title": "A",
             "address": "addr",
             "price_per_night": 1000,
+            "monthly_rent": 40000,
+            "monthly_utilities": 5000,
         },
     ).json()
     r = client.patch(
@@ -80,6 +82,73 @@ def test_create_apartment_with_baseline(client):
     body = r.json()
     assert body["monthly_rent"] == 50000
     assert body["monthly_utilities"] == 7000
+
+
+def test_patch_apartment_fails_without_baseline(client):
+    """У существующей квартиры без baseline любой PATCH падает 400."""
+    u = seed_user(client, role="owner")
+    apt = client.post(
+        "/apartments",
+        headers=auth(u["id"]),
+        json={"title": "A", "address": "X", "price_per_night": 1000},
+    ).json()
+    r = client.patch(
+        f"/apartments/{apt['id']}",
+        headers=auth(u["id"]),
+        json={"price_per_night": 1500},
+    )
+    assert r.status_code == 400
+    assert "monthly_rent" in r.json()["detail"]
+
+
+def test_patch_apartment_ok_with_baseline_in_payload(client):
+    u = seed_user(client, role="owner")
+    apt = client.post(
+        "/apartments",
+        headers=auth(u["id"]),
+        json={"title": "A", "address": "X", "price_per_night": 1000},
+    ).json()
+    r = client.patch(
+        f"/apartments/{apt['id']}",
+        headers=auth(u["id"]),
+        json={"monthly_rent": 50000, "monthly_utilities": 7000},
+    )
+    assert r.status_code == 200
+    assert r.json()["monthly_rent"] == 50000
+
+
+def test_patch_apartment_ok_when_baseline_already_in_db(client):
+    """Если baseline уже в БД, можно патчить другое поле без него."""
+    u = seed_user(client, role="owner")
+    apt = client.post(
+        "/apartments",
+        headers=auth(u["id"]),
+        json={
+            "title": "A", "address": "X", "price_per_night": 1000,
+            "monthly_rent": 40000, "monthly_utilities": 5000,
+        },
+    ).json()
+    r = client.patch(
+        f"/apartments/{apt['id']}",
+        headers=auth(u["id"]),
+        json={"price_per_night": 1500},
+    )
+    assert r.status_code == 200
+
+
+def test_patch_apartment_fails_with_only_one_baseline_when_db_empty(client):
+    u = seed_user(client, role="owner")
+    apt = client.post(
+        "/apartments",
+        headers=auth(u["id"]),
+        json={"title": "A", "address": "X", "price_per_night": 1000},
+    ).json()
+    r = client.patch(
+        f"/apartments/{apt['id']}",
+        headers=auth(u["id"]),
+        json={"monthly_rent": 50000},
+    )
+    assert r.status_code == 400
 
 
 def test_get_apartment_by_id(client):
