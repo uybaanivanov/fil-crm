@@ -48,3 +48,42 @@ export function fmtNights(ci, co) {
 export function fmtRole(role) {
     return { owner: 'Владелец', admin: 'Администратор', maid: 'Горничная' }[role] || role;
 }
+
+// ISO local "YYYY-MM-DDTHH:MM:SS" → "23 апр, 14:00". Null → ''.
+export function fmtDateTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.getDate() + ' ' + MONTHS_SHORT[d.getMonth()] + ', ' +
+        String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
+// Returns a string for <input type="datetime-local"> ("YYYY-MM-DDTHH:MM").
+// If there's an active guest → checkout day at 12:00 local. Otherwise → now rounded up to next hour.
+export function defaultCleaningDueAt(currentGuest) {
+    let d;
+    if (currentGuest?.booking?.check_out) {
+        d = new Date(currentGuest.booking.check_out + 'T12:00:00');
+    } else {
+        d = new Date();
+        d.setMinutes(0, 0, 0);
+        d.setHours(d.getHours() + 1);
+    }
+    return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0') + 'T' +
+        String(d.getHours()).padStart(2, '0') + ':' +
+        String(d.getMinutes()).padStart(2, '0');
+}
+
+// "YYYY-MM-DDTHH:MM" (from datetime-local) → "YYYY-MM-DDTHH:MM:00" (API format).
+export function datetimeLocalToIso(value) {
+    if (!value) return null;
+    return value.length === 16 ? value + ':00' : value;
+}
+
+// ISO "YYYY-MM-DDTHH:MM:SS" → "YYYY-MM-DDTHH:MM" (prefill datetime-local).
+export function isoToDatetimeLocal(iso) {
+    if (!iso) return '';
+    return iso.length >= 16 ? iso.slice(0, 16) : iso;
+}
