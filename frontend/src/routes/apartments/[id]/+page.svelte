@@ -9,6 +9,8 @@
     import Chip from '$lib/ui/Chip.svelte';
     import Avatar from '$lib/ui/Avatar.svelte';
     import CleaningDueDialog from '$lib/ui/CleaningDueDialog.svelte';
+    import EditableField from '$lib/ui/EditableField.svelte';
+    import ApartmentExpenses from '$lib/ui/ApartmentExpenses.svelte';
     import {
         fmtRub, fmtShortRub, fmtDate, fmtNights, fmtMonth,
         fmtDateTime, defaultCleaningDueAt, datetimeLocalToIso, isoToDatetimeLocal
@@ -26,6 +28,12 @@
     let dialogOpen = $state(false);
     let dialogDefault = $state('');
     let dialogError = $state(null);
+
+    let editingBaseline = $state(false);
+    let baselineRent = $state('');
+    let baselineUtilities = $state('');
+    let baselineError = $state(null);
+    let baselineErrorField = $state(null); // 'rent' | 'utilities' | null
 
     const isOverdue = $derived(
         apt?.cleaning_due_at && new Date(apt.cleaning_due_at) < new Date()
@@ -52,6 +60,41 @@
     }
 
     onMount(load);
+
+    function startEditBaseline() {
+        baselineRent = apt.monthly_rent ?? '';
+        baselineUtilities = apt.monthly_utilities ?? '';
+        baselineError = null;
+        baselineErrorField = null;
+        editingBaseline = true;
+    }
+
+    async function saveBaseline() {
+        baselineError = null;
+        baselineErrorField = null;
+        const rent = parseInt(baselineRent, 10);
+        const util = parseInt(baselineUtilities, 10);
+        if (!rent || rent < 0) {
+            baselineError = 'Укажи аренду';
+            baselineErrorField = 'rent';
+            return;
+        }
+        if (!util || util < 0) {
+            baselineError = 'Укажи ЖКХ';
+            baselineErrorField = 'utilities';
+            return;
+        }
+        try {
+            await api.patch(`/apartments/${aptId}`, {
+                monthly_rent: rent,
+                monthly_utilities: util,
+            });
+            editingBaseline = false;
+            await load();
+        } catch (e) {
+            baselineError = e.message;
+        }
+    }
 
     const today = new Date().toISOString().slice(0, 10);
 
@@ -154,6 +197,57 @@
             </div>
         </Section>
     {/if}
+
+    <Section title="Обязательные суммы">
+        <div class="wrap">
+            <Card pad={14}>
+                {#if editingBaseline}
+                    <div class="bl-form">
+                        <EditableField
+                            label="Аренда помещения / мес"
+                            required
+                            error={baselineErrorField === 'rent' ? baselineError : null}
+                        >
+                            <input type="number" bind:value={baselineRent} placeholder="₽" />
+                        </EditableField>
+                        <EditableField
+                            label="ЖКХ / мес"
+                            required
+                            error={baselineErrorField === 'utilities' ? baselineError : null}
+                        >
+                            <input type="number" bind:value={baselineUtilities} placeholder="₽" />
+                        </EditableField>
+                        {#if baselineError && !baselineErrorField}
+                            <div class="err-banner">{baselineError}</div>
+                        {/if}
+                        <div class="bl-actions">
+                            <button type="button" class="ghost"
+                                onclick={() => (editingBaseline = false)}>Отмена</button>
+                            <button type="button" class="primary" onclick={saveBaseline}>Сохранить</button>
+                        </div>
+                    </div>
+                {:else}
+                    <div class="bl-row" class:empty={apt.monthly_rent == null}>
+                        <span>Аренда / мес</span>
+                        <span>{apt.monthly_rent != null ? fmtRub(apt.monthly_rent) : '— не заполнено'}</span>
+                    </div>
+                    <div class="bl-row" class:empty={apt.monthly_utilities == null}>
+                        <span>ЖКХ / мес</span>
+                        <span>{apt.monthly_utilities != null ? fmtRub(apt.monthly_utilities) : '— не заполнено'}</span>
+                    </div>
+                    <button type="button" class="ghost bl-edit" onclick={startEditBaseline}>
+                        {apt.monthly_rent == null || apt.monthly_utilities == null
+                            ? 'Заполнить обязательные'
+                            : 'Изменить'}
+                    </button>
+                {/if}
+            </Card>
+        </div>
+    </Section>
+
+    <Section title="Расходы">
+        <ApartmentExpenses apartmentId={aptId} />
+    </Section>
 
     <!-- Характеристики -->
     <Section title="Характеристики">
@@ -327,4 +421,22 @@
     .ghost { background: var(--card); color: var(--ink); border: 1px solid var(--border); }
     .ghost:hover { background: var(--card-hi); }
     .overdue { margin-left: 8px; }
+
+    .bl-form { display: flex; flex-direction: column; gap: 10px; }
+    .bl-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+    .bl-row {
+        display: flex; justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border-soft);
+        font-size: 13px;
+    }
+    .bl-row:last-of-type { border-bottom: none; }
+    .bl-row.empty { color: var(--danger, #c33); }
+    .bl-edit { margin-top: 10px; width: 100%; }
+    .err-banner {
+        background: var(--danger-bg, #fde);
+        color: var(--danger, #c33);
+        padding: 6px 8px; border-radius: 4px;
+        font-size: 12px;
+    }
 </style>
