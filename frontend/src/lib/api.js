@@ -11,7 +11,8 @@ export class ApiError extends Error {
 }
 
 async function request(method, path, body, { auth = true } = {}) {
-    const headers = { 'Content-Type': 'application/json' };
+    const isFormData = body instanceof FormData;
+    const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
     if (auth) {
         const user = getUser();
         if (user) headers['X-User-Id'] = String(user.id);
@@ -19,7 +20,7 @@ async function request(method, path, body, { auth = true } = {}) {
     const res = await fetch(`${BASE}${path}`, {
         method,
         headers,
-        body: body === undefined ? undefined : JSON.stringify(body)
+        body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body)
     });
     if (res.status === 204) return null;
     const data = await res.json().catch(() => ({}));
@@ -28,10 +29,11 @@ async function request(method, path, body, { auth = true } = {}) {
 }
 
 export const api = {
-    get:    (path, opts)       => request('GET',    path, undefined, opts),
-    post:   (path, body, opts) => request('POST',   path, body,      opts),
-    patch:  (path, body, opts) => request('PATCH',  path, body,      opts),
-    delete: (path, opts)       => request('DELETE', path, undefined, opts)
+    get:      (path, opts)           => request('GET',    path, undefined, opts),
+    post:     (path, body, opts)     => request('POST',   path, body,      opts),
+    postForm: (path, formData, opts) => request('POST',   path, formData,  opts),
+    patch:    (path, body, opts)     => request('PATCH',  path, body,      opts),
+    delete:   (path, opts)           => request('DELETE', path, undefined, opts)
 };
 
 // Helper: определить, жив ли dev-picker. Не бросает — возвращает bool.

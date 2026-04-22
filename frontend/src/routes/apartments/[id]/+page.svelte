@@ -12,6 +12,7 @@
     import EditableField from '$lib/ui/EditableField.svelte';
     import ApartmentExpenses from '$lib/ui/ApartmentExpenses.svelte';
     import InlineEdit from '$lib/ui/InlineEdit.svelte';
+    import CoverPicker from '$lib/ui/CoverPicker.svelte';
     import HelpTip from '$lib/ui/HelpTip.svelte';
     import {
         fmtRub, fmtShortRub, fmtDate, fmtNights, fmtMonth,
@@ -164,13 +165,11 @@
 {:else}
     <!-- Cover -->
     <div class="cover-wrap">
-        {#if apt.cover_url}
-            <img src={apt.cover_url} alt="" class="cover" />
-        {:else}
-            <div class="cover placeholder">
-                {(apt.title || '?').slice(0, 2).toUpperCase()}
-            </div>
-        {/if}
+        <CoverPicker
+            apartmentId={apt.id}
+            cover={apt.cover_url}
+            onChange={(u) => { apt.cover_url = u; }}
+        />
         <div class="cover-chip">
             <Chip tone={currentGuest ? 'ok' : apt.needs_cleaning ? 'due' : 'draft'}>
                 {currentGuest ? `Занята до ${fmtDate(currentGuest.booking.check_out)}` : apt.needs_cleaning ? 'Требует уборки' : 'Свободна'}
@@ -369,17 +368,6 @@
                         />
                     </span>
                 </div>
-                <div class="ch-row">
-                    <span class="ch-key">Обложка</span>
-                    <span class="ch-val">
-                        <InlineEdit
-                            value={apt.cover_url}
-                            type="text"
-                            placeholder="URL картинки"
-                            onSave={v => patchField('cover_url', v)}
-                        />
-                    </span>
-                </div>
                 <div class="ch-row last">
                     <span class="ch-key">Нужна уборка</span>
                     <span class="ch-val">
@@ -427,20 +415,6 @@
         overflow: hidden;
         position: relative;
         background: var(--bg-subtle);
-    }
-    .cover {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    .cover.placeholder {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: var(--font-mono);
-        font-size: 34px;
-        font-weight: 700;
-        color: var(--faint);
     }
     .cover-chip {
         position: absolute;
