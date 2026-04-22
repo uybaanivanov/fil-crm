@@ -15,7 +15,7 @@
 ## Структура файлов
 
 **Создаются:**
-- `backend/morelogin.py` — клиент MoreLogin API
+- `backend/morelogin.py` — клиент MoreLogin API (httpx-based, async)
 - `backend/parsers/__init__.py` — фасад `parse(url) -> ParsedListing`
 - `backend/parsers/types.py` — `ParsedListing` dataclass
 - `backend/parsers/doska_ykt.py` — парсер doska.ykt.ru
@@ -27,7 +27,6 @@
 - `tests/test_parser_youla.py`
 - `tests/test_parsers_router.py` — резолв редиректа + выбор парсера
 - `tests/e2e_morelogin_open.py` — интерактивный smoke MoreLogin-клиента
-- `tests/e2e_morelogin_discover.py` — интерактивный «тыкать в эндпоинты API» (черновой, удаляется по завершении Task 1)
 - `tests/e2e_capture_html.py` — интерактивный скрипт, сохраняет HTML страницы в `tests/fixtures/`
 - `tests/e2e_parse_url.py` — интерактивный полный пайплайн
 
@@ -42,84 +41,26 @@
 
 **Удаляются в конце:**
 - `tests/e2e_listing_urls.txt` — после успешного прогона 14 ссылок через новый UX
-- `tests/e2e_morelogin_discover.py` — после задокументированных эндпоинтов
 - `scripts/fetch_links.py` — разовый скрипт, больше не нужен
 
 ---
 
-## Task 1: Клиент MoreLogin — discovery + реализация
+## Task 1: Клиент MoreLogin
 
 **Files:**
-- Create: `tests/e2e_morelogin_discover.py` (временный)
 - Create: `backend/morelogin.py`
+- Modify: `pyproject.toml` — добавить playwright, beautifulsoup4 (httpx уже добавлен)
+- Modify: `.env` — добавить `MORELOGIN_API_URL`, `MORELOGIN_ENV_ID`
 
-MoreLogin API документация не у нас под рукой — локальный сервис на `http://127.0.0.1:40000`. Сначала ручная разведка эндпоинтов, потом типизированный клиент.
+Контракт API подтверждён curl-прощупыванием:
+- `POST /api/env/start {"envId": "<19-digit>"}` → `{"code":0,"data":{"envId":"...","debugPort":"61384","type":"chrome","version":144,"webdriver":"..."}}`
+- `POST /api/env/close {"envId":"..."}` → `{"code":0,"data":{"envId":"...","debugPort":""}}`
+- CDP подключение: `http://127.0.0.1:<debugPort>` — там DevTools endpoint, Playwright принимает такой URL в `connect_over_cdp`.
+- Success criterion: `code == 0`.
 
-- [ ] **Step 1: Создать интерактивный discovery-скрипт**
+**Важно**: `MORELOGIN_ENV_ID` — это не визуальный «P-1», а 19-значный `id` из `/api/env/page`. Получить можно `curl -X POST http://127.0.0.1:40000/api/env/page -H "Content-Type: application/json" -d '{"pageNo":1,"pageSize":20}'` и взять `data.dataList[0].id`. У разработчика это уже лежит в `.env`.
 
-`tests/e2e_morelogin_discover.py`:
-```python
-"""Интерактивная разведка MoreLogin API. Запусти, следуй подсказкам."""
-import json
-import os
-
-import httpx
-
-API = os.environ.get("MORELOGIN_API_URL", "http://127.0.0.1:40000")
-
-
-def pp(r):
-    print(f"\n{r.request.method} {r.request.url} -> {r.status_code}")
-    try:
-        print(json.dumps(r.json(), ensure_ascii=False, indent=2)[:2000])
-    except Exception:
-        print(r.text[:2000])
-
-
-def main():
-    with httpx.Client(base_url=API, timeout=30) as c:
-        print("=== 1) Список возможных list-эндпоинтов ===")
-        for path in ["/api/env/list", "/env/list", "/browser/list", "/profile/list", "/api/browser/list"]:
-            try:
-                pp(c.post(path, json={"pageNo": 1, "pageSize": 20}))
-            except Exception as e:
-                print(f"{path}: ERR {e}")
-
-        profile_id = input("\nВведи profile id для старта [1]: ").strip() or "1"
-
-        print("\n=== 2) Попытки старта ===")
-        for path, payload in [
-            ("/api/env/start", {"envId": profile_id}),
-            ("/api/browser/start", {"profileId": profile_id}),
-            ("/browser/start", {"profileId": int(profile_id)}),
-            ("/api/browser/start-browser", {"profileId": int(profile_id)}),
-        ]:
-            try:
-                pp(c.post(path, json=payload))
-            except Exception as e:
-                print(f"{path}: ERR {e}")
-
-        input("\n[Enter] чтобы попробовать /stop (не забудь закрыть профиль сам если надо)")
-        for path in ["/api/env/close", "/api/browser/stop", "/browser/stop"]:
-            try:
-                pp(c.post(path, json={"envId": profile_id, "profileId": profile_id}))
-            except Exception as e:
-                print(f"{path}: ERR {e}")
-
-
-if __name__ == "__main__":
-    main()
-```
-
-- [ ] **Step 2: Запустить разведку, задокументировать найденные эндпоинты**
-
-```bash
-uv run --env-file .env --with httpx python tests/e2e_morelogin_discover.py
-```
-
-Задача инженера: записать в комментарий внутри `backend/morelogin.py` найденные start/stop endpoints, путь к CDP URL в ответе (обычно что-то вида `{"data": {"ws": "ws://127.0.0.1:NNNNN/devtools/browser/..."}}` или `{"data": {"debug_port": 9222}}`).
-
-- [ ] **Step 3: Добавить зависимости**
+- [ ] **Step 1: Добавить зависимости**
 
 Modify `pyproject.toml`:
 ```toml
@@ -137,15 +78,14 @@ uv sync
 uv run playwright install chromium
 ```
 
-- [ ] **Step 4: Написать клиент `backend/morelogin.py`**
-
-Заменить плейсхолдеры `START_PATH`, `STOP_PATH`, `_extract_cdp` на реальные значения из разведки.
+- [ ] **Step 2: Написать клиент `backend/morelogin.py`**
 
 ```python
-"""MoreLogin locally-hosted API client.
+"""Клиент локального MoreLogin API (http://127.0.0.1:40000).
 
-Точные пути эндпоинтов берутся из Task 1 (discovery). Обновить константы
-START_PATH/STOP_PATH и функцию _extract_cdp если форма ответа другая.
+Дока: https://guide.morelogin.com/api-reference/local-api/local-api
+Контракт ответа: {"code": 0, "msg": null, "data": {...}, "requestId": "..."}.
+Ошибка — любой code != 0 или HTTP != 200.
 """
 import os
 from dataclasses import dataclass
@@ -153,10 +93,7 @@ from dataclasses import dataclass
 import httpx
 
 API_URL = os.environ.get("MORELOGIN_API_URL", "http://127.0.0.1:40000")
-PROFILE_ID = int(os.environ.get("MORELOGIN_PROFILE_ID", "1"))
-
-START_PATH = "/api/env/start"   # TODO заменить на найденный в discovery
-STOP_PATH = "/api/env/close"    # TODO заменить на найденный в discovery
+ENV_ID = os.environ.get("MORELOGIN_ENV_ID", "")
 TIMEOUT = httpx.Timeout(60.0)
 
 
@@ -166,42 +103,46 @@ class MoreLoginError(RuntimeError):
 
 @dataclass
 class ProfileSession:
-    cdp_url: str
+    env_id: str
+    debug_port: int
+    cdp_url: str  # http://127.0.0.1:<debug_port>
 
 
-def _extract_cdp(payload: dict) -> str:
-    # Подстроить под реальную форму ответа
-    data = payload.get("data") or payload
-    for key in ("ws", "wsUrl", "webSocketDebuggerUrl"):
-        if key in data:
-            return data[key]
-    if "debug_port" in data:
-        port = data["debug_port"]
-        return f"http://127.0.0.1:{port}"
-    raise MoreLoginError(f"cannot find CDP URL in response: {payload!r}")
+def _unwrap(r: httpx.Response) -> dict:
+    if r.status_code != 200:
+        raise MoreLoginError(f"http {r.status_code}: {r.text}")
+    body = r.json()
+    if body.get("code") != 0:
+        raise MoreLoginError(f"api error: {body}")
+    return body.get("data") or {}
 
 
-async def start_profile(profile_id: int = PROFILE_ID) -> ProfileSession:
+async def start_profile(env_id: str | None = None) -> ProfileSession:
+    eid = env_id or ENV_ID
+    if not eid:
+        raise MoreLoginError("MORELOGIN_ENV_ID не задан")
     async with httpx.AsyncClient(base_url=API_URL, timeout=TIMEOUT) as c:
-        r = await c.post(START_PATH, json={"envId": str(profile_id)})
-        if r.status_code != 200:
-            raise MoreLoginError(f"start failed: {r.status_code} {r.text}")
-        return ProfileSession(cdp_url=_extract_cdp(r.json()))
+        data = _unwrap(await c.post("/api/env/start", json={"envId": eid}))
+    port = int(data["debugPort"])
+    return ProfileSession(env_id=eid, debug_port=port, cdp_url=f"http://127.0.0.1:{port}")
 
 
-async def stop_profile(profile_id: int = PROFILE_ID) -> None:
+async def stop_profile(env_id: str | None = None) -> None:
+    eid = env_id or ENV_ID
+    if not eid:
+        raise MoreLoginError("MORELOGIN_ENV_ID не задан")
     async with httpx.AsyncClient(base_url=API_URL, timeout=TIMEOUT) as c:
-        r = await c.post(STOP_PATH, json={"envId": str(profile_id)})
-        if r.status_code >= 400:
-            raise MoreLoginError(f"stop failed: {r.status_code} {r.text}")
+        _unwrap(await c.post("/api/env/close", json={"envId": eid}))
 ```
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add backend/morelogin.py pyproject.toml uv.lock tests/e2e_morelogin_discover.py
-git commit -m "feat(morelogin): клиент локального API + discovery-скрипт"
+git add backend/morelogin.py pyproject.toml uv.lock .env
+git commit -m "feat(morelogin): клиент локального API"
 ```
+
+Примечание: `.env` коммитить нормально т.к. у нас прототип и там нет секретов (telethon — свои API id/hash, они ниже секретные, но файл и так в репе).
 
 ---
 
