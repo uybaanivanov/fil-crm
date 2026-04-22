@@ -209,6 +209,9 @@ async def _fetch_and_parse(url: str):
             browser = await p.chromium.connect_over_cdp(session.cdp_url)
             ctx = browser.contexts[0] if browser.contexts else await browser.new_context()
             page = await ctx.new_page()
+            for other in list(ctx.pages):
+                if other is not page:
+                    await other.close()
             await page.goto(final_url, wait_until="load", timeout=60000)
             html = await page.content()
             await page.close()
