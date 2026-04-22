@@ -1,19 +1,42 @@
-"""Smoke MoreLogin: запусти, увидишь окно MoreLogin-профиля, Enter — закроется."""
-import asyncio
+"""Smoke MoreLogin: стартует профиль через локальный API, печатает CDP URL,
+ждёт Enter, закрывает. Самодостаточный — только httpx + env.
 
-from backend.morelogin import ENV_ID, start_profile, stop_profile
+Запуск:  uv run --env-file .env python tests/e2e_morelogin_open.py
+"""
+import os
+import sys
+
+import httpx
+
+API_URL = os.environ.get("MORELOGIN_API_URL", "http://127.0.0.1:40000")
 
 
-async def main():
-    eid = ENV_ID or input("MORELOGIN_ENV_ID не задан, введи envId: ").strip()
+def call(path: str, payload: dict) -> dict:
+    r = httpx.post(f"{API_URL}{path}", json=payload, timeout=60.0)
+    r.raise_for_status()
+    body = r.json()
+    if body.get("code") != 0:
+        raise SystemExit(f"{path} → api error: {body}")
+    return body.get("data") or {}
+
+
+def main():
+    eid = os.environ.get("MORELOGIN_ENV_ID") or input("envId: ").strip()
+    if not eid:
+        sys.exit("envId пустой")
+
     input(f"Стартовать профиль {eid}? [Enter]")
-    session = await start_profile(eid)
-    print(f"CDP URL: {session.cdp_url}")
-    print(f"debug port: {session.debug_port}")
+    data = call("/api/env/start", {"envId": eid})
+    port = data.get("debugPort")
+    if not port:
+        sys.exit(f"debugPort пустой: {data}")
+    print(f"debug port: {port}")
+    print(f"CDP URL:    http://127.0.0.1:{port}")
+
     input("Профиль открыт. Enter для закрытия...")
-    await stop_profile(eid)
+    call("/api/env/close", {"envId": eid})
     print("OK")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
