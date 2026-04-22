@@ -12,6 +12,7 @@
     import EditableField from '$lib/ui/EditableField.svelte';
     import ApartmentExpenses from '$lib/ui/ApartmentExpenses.svelte';
     import InlineEdit from '$lib/ui/InlineEdit.svelte';
+    import HelpTip from '$lib/ui/HelpTip.svelte';
     import {
         fmtRub, fmtShortRub, fmtDate, fmtNights, fmtMonth,
         fmtDateTime, defaultCleaningDueAt, datetimeLocalToIso, isoToDatetimeLocal
@@ -181,14 +182,17 @@
     {#if stats}
         <div class="kpis">
             {#each [
-                ['Ночей', stats.nights, fmtMonth(currentMonth)],
-                ['ADR', fmtShortRub(stats.adr), ''],
-                ['Выручка', fmtShortRub(stats.revenue), Math.round((stats.utilization || 0) * 100) + '%']
-            ] as [lbl, val, meta]}
+                { lbl: 'Ночей', val: stats.nights, meta: fmtMonth(currentMonth), term: null },
+                { lbl: 'ADR', val: fmtShortRub(stats.adr), meta: '', term: 'adr' },
+                { lbl: 'Выручка', val: fmtShortRub(stats.revenue), meta: Math.round((stats.utilization || 0) * 100) + '%', term: null }
+            ] as k}
                 <div class="kpi">
-                    <div class="kpi-lbl">{lbl}</div>
-                    <div class="kpi-val">{val}</div>
-                    {#if meta}<div class="kpi-meta">{meta}</div>{/if}
+                    <div class="kpi-lbl">
+                        {k.lbl}
+                        {#if k.term}<HelpTip term={k.term}/>{/if}
+                    </div>
+                    <div class="kpi-val">{k.val}</div>
+                    {#if k.meta}<div class="kpi-meta">{k.meta}</div>{/if}
                 </div>
             {/each}
         </div>

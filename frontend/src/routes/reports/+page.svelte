@@ -6,6 +6,7 @@
     import Card from '$lib/ui/Card.svelte';
     import Section from '$lib/ui/Section.svelte';
     import { fmtShortRub, fmtRub } from '$lib/format.js';
+    import HelpTip from '$lib/ui/HelpTip.svelte';
 
     let period = $state('month');
     let data = $state(null);
@@ -51,14 +52,17 @@
 {:else}
     <div class="kpis">
         {#each [
-            ['Занятость', Math.round((data.occupancy || 0) * 1000) / 10 + '%'],
-            ['ADR', fmtShortRub(data.adr)],
-            ['RevPAR', fmtShortRub(data.revpar)],
-            ['Ср. ночи', (data.avg_nights || 0).toFixed(1)]
-        ] as [lbl, val]}
+            { lbl: 'Занятость', val: Math.round((data.occupancy || 0) * 1000) / 10 + '%', term: null },
+            { lbl: 'ADR', val: fmtShortRub(data.adr), term: 'adr' },
+            { lbl: 'RevPAR', val: fmtShortRub(data.revpar), term: 'revpar' },
+            { lbl: 'Ср. ночи', val: (data.avg_nights || 0).toFixed(1), term: null }
+        ] as k}
             <Card pad={14}>
-                <div class="eyebrow">{lbl}</div>
-                <div class="val">{val}</div>
+                <div class="eyebrow">
+                    {k.lbl}
+                    {#if k.term}<HelpTip term={k.term}/>{/if}
+                </div>
+                <div class="val">{k.val}</div>
             </Card>
         {/each}
     </div>
