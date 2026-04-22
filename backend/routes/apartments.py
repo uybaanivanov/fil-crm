@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 from backend.auth import require_role
 from backend.db import get_conn
+from backend.parsers import UnsupportedSource
 
 router = APIRouter(prefix="/apartments", tags=["apartments"])
 
@@ -151,7 +152,7 @@ def apartment_stats(
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_apartment(
-    payload: ApartmentIn, _: dict = Depends(require_role("owner", "admin"))
+    payload: ApartmentIn, _: dict = Depends(require_role("owner"))
 ):
     import sqlite3
 
@@ -174,6 +175,63 @@ def create_apartment(
             )
         raise
     return dict(row)
+
+
+class ParseUrlIn(BaseModel):
+    url: str = Field(min_length=1)
+
+
+async def _fetch_and_parse(url: str):
+    """Резолв редиректа, старт MoreLogin, Playwright через CDP, парсер.
+    Вынесено, чтобы тесты могли подменить через monkeypatch."""
+    from urllib.parse import urlparse
+
+    from playwright.async_api import async_playwright
+
+    from backend import morelogin
+    from backend.parsers import parse_html, resolve_final_url, resolve_source
+
+    _ALLOWED = {
+        "doska.ykt.ru", "www.doska.ykt.ru",
+        "youla.ru", "www.youla.ru",
+        "trk.mail.ru",
+    }
+    host = urlparse(url).netloc.lower()
+    if host not in _ALLOWED:
+        raise UnsupportedSource(f"unsupported host: {host}")
+
+    final_url = resolve_final_url(url)
+    resolve_source(final_url)
+
+    session = await morelogin.start_profile()
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.connect_over_cdp(session.cdp_url)
+            ctx = browser.contexts[0] if browser.contexts else await browser.new_context()
+            page = await ctx.new_page()
+            await page.goto(final_url, wait_until="load", timeout=60000)
+            html = await page.content()
+            await page.close()
+        return parse_html(html, final_url)
+    finally:
+        await morelogin.stop_profile()
+
+
+@router.post("/parse-url")
+async def parse_url(
+    payload: ParseUrlIn, _: dict = Depends(require_role("owner"))
+):
+    from backend.parsers import ParseError
+
+    try:
+        listing = await _fetch_and_parse(payload.url)
+    except UnsupportedSource as e:
+        raise HTTPException(status_code=422, detail=f"unsupported_source: {e}")
+    except ParseError as e:
+        raise HTTPException(status_code=422, detail=f"parse_failed: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"fetch_failed: {e}")
+    return listing.to_dict()
 
 
 @router.patch("/{apt_id}")

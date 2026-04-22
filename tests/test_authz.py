@@ -42,3 +42,23 @@ def test_owner_can_access_users(client):
     u = seed_user(client, role="owner", name="Айсен")
     r = client.get("/users", headers=auth(u["id"]))
     assert r.status_code == 200
+
+
+def test_admin_cannot_parse_url(client):
+    u = seed_user(client, role="admin", name="Дарья")
+    r = client.post("/apartments/parse-url", json={"url": "https://doska.ykt.ru/1"}, headers=auth(u["id"]))
+    assert r.status_code == 403
+
+
+def test_admin_cannot_create_apartment(client):
+    u = seed_user(client, role="admin", name="Дарья")
+    payload = {"title": "T", "address": "A", "price_per_night": 100}
+    r = client.post("/apartments", json=payload, headers=auth(u["id"]))
+    assert r.status_code == 403
+
+
+def test_owner_can_create_apartment(client):
+    u = seed_user(client, role="owner", name="Айсен")
+    payload = {"title": "T", "address": "A", "price_per_night": 100}
+    r = client.post("/apartments", json=payload, headers=auth(u["id"]))
+    assert r.status_code == 201

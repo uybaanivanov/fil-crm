@@ -153,6 +153,39 @@ def test_apartment_without_source_url_ok(client):
     assert r1.status_code == 201 and r2.status_code == 201
 
 
+def test_parse_url_returns_listing(client, monkeypatch):
+    from backend.parsers.types import ParsedListing
+    import backend.routes.apartments as apts_mod
+
+    async def fake_fetch(url):
+        return ParsedListing(
+            source="doska_ykt", source_url=url,
+            title="Flat", address="Addr", price_per_night=3000,
+        )
+    monkeypatch.setattr(apts_mod, "_fetch_and_parse", fake_fetch)
+
+    u = seed_user(client, role="owner", name="Айсен")
+    r = client.post(
+        "/apartments/parse-url",
+        json={"url": "https://doska.ykt.ru/1"},
+        headers=auth(u["id"]),
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["title"] == "Flat"
+    assert data["source"] == "doska_ykt"
+
+
+def test_parse_url_unsupported_is_422(client):
+    u = seed_user(client, role="owner", name="Айсен")
+    r = client.post(
+        "/apartments/parse-url",
+        json={"url": "https://example.com/1"},
+        headers=auth(u["id"]),
+    )
+    assert r.status_code == 422
+
+
 def test_list_with_stats_includes_utilization_and_status(client):
     u = _owner(client)
     apt = _apt_with_price(client, u["id"], 4000)
