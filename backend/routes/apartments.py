@@ -1,3 +1,5 @@
+import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
@@ -34,8 +36,12 @@ class ApartmentPatch(BaseModel):
     source_url: str | None = None
 
 
+class CleaningDueIn(BaseModel):
+    cleaning_due_at: datetime.datetime
+
+
 SELECT_FIELDS = (
-    "id, title, address, price_per_night, needs_cleaning, "
+    "id, title, address, price_per_night, needs_cleaning, cleaning_due_at, "
     "cover_url, rooms, area_m2, floor, district, source, source_url, created_at"
 )
 
@@ -104,7 +110,9 @@ def list_apartments_needing_cleaning(
 ):
     with get_conn() as conn:
         rows = conn.execute(
-            f"SELECT {SELECT_FIELDS} FROM apartments WHERE needs_cleaning = 1 ORDER BY id"
+            f"SELECT {SELECT_FIELDS} FROM apartments "
+            "WHERE needs_cleaning = 1 "
+            "ORDER BY cleaning_due_at IS NULL, cleaning_due_at ASC, id"
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -279,10 +287,16 @@ def delete_apartment(apt_id: int, _: dict = Depends(require_role("owner", "admin
 
 
 @router.post("/{apt_id}/mark-dirty")
-def mark_dirty(apt_id: int, _: dict = Depends(require_role("owner", "admin"))):
+def mark_dirty(
+    apt_id: int,
+    payload: CleaningDueIn,
+    _: dict = Depends(require_role("owner", "admin")),
+):
+    due_iso = payload.cleaning_due_at.isoformat(timespec="seconds")
     with get_conn() as conn:
         cur = conn.execute(
-            "UPDATE apartments SET needs_cleaning = 1 WHERE id = ?", (apt_id,)
+            "UPDATE apartments SET needs_cleaning = 1, cleaning_due_at = ? WHERE id = ?",
+            (due_iso, apt_id),
         )
         if cur.rowcount == 0:
             raise HTTPException(
@@ -296,7 +310,8 @@ def mark_dirty(apt_id: int, _: dict = Depends(require_role("owner", "admin"))):
 def mark_clean(apt_id: int, _: dict = Depends(require_role("owner", "admin", "maid"))):
     with get_conn() as conn:
         cur = conn.execute(
-            "UPDATE apartments SET needs_cleaning = 0 WHERE id = ?", (apt_id,)
+            "UPDATE apartments SET needs_cleaning = 0, cleaning_due_at = NULL WHERE id = ?",
+            (apt_id,),
         )
         if cur.rowcount == 0:
             raise HTTPException(
