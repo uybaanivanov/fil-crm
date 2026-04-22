@@ -1,6 +1,7 @@
 <script>
     import { page } from '$app/state';
     import { goto } from '$app/navigation';
+    import { getUser } from '$lib/auth.js';
 
     const TABS = [
         { id: 'home',       label: 'Сводка',    href: '/',           d: 'M3 10.5 10 4l7 6.5V16a1 1 0 0 1-1 1h-3v-5H8v5H5a1 1 0 0 1-1-1z' },
@@ -10,6 +11,12 @@
         { id: 'profile',    label: 'Профиль',   href: '/settings',   d: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z' }
     ];
 
+    const tabs = $derived.by(() => {
+        const me = getUser();
+        if (me?.role === 'maid') return TABS.filter(t => t.id === 'cleaning');
+        return TABS;
+    });
+
     function isActive(href) {
         const path = page.url.pathname;
         if (href === '/') return path === '/';
@@ -18,7 +25,7 @@
 </script>
 
 <nav class="tabbar">
-    {#each TABS as tab}
+    {#each tabs as tab}
         <button
             class="tab"
             class:active={isActive(tab.href)}

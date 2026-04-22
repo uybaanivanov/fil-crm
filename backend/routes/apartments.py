@@ -18,6 +18,7 @@ class ApartmentIn(BaseModel):
     area_m2: int | None = Field(default=None, gt=0)
     floor: str | None = None
     district: str | None = None
+    callsign: str | None = None
     cover_url: str | None = None
     source: str | None = None
     source_url: str | None = None
@@ -31,6 +32,7 @@ class ApartmentPatch(BaseModel):
     area_m2: int | None = Field(default=None, gt=0)
     floor: str | None = None
     district: str | None = None
+    callsign: str | None = None
     cover_url: str | None = None
     source: str | None = None
     source_url: str | None = None
@@ -42,7 +44,7 @@ class CleaningDueIn(BaseModel):
 
 SELECT_FIELDS = (
     "id, title, address, price_per_night, needs_cleaning, cleaning_due_at, "
-    "cover_url, rooms, area_m2, floor, district, source, source_url, created_at"
+    "cover_url, rooms, area_m2, floor, district, callsign, source, source_url, created_at"
 )
 
 

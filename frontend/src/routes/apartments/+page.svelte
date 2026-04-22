@@ -51,7 +51,8 @@
                 if (!query) return true;
                 const q = query.toLowerCase();
                 return (a.title || '').toLowerCase().includes(q)
-                    || (a.address || '').toLowerCase().includes(q);
+                    || (a.address || '').toLowerCase().includes(q)
+                    || (a.callsign || '').toLowerCase().includes(q);
             })
     );
 
@@ -61,12 +62,18 @@
         return { tone: 'draft', label: 'Свободна' };
     }
 
+    function headline(a) {
+        const parts = [];
+        if (a.area_m2) parts.push(`${a.area_m2} м²`);
+        if (a.address) parts.push(a.address);
+        return parts.join(', ') || (a.title || '—');
+    }
+
     function metaLine(a) {
         const parts = [];
         if (a.rooms) parts.push(a.rooms);
-        if (a.area_m2) parts.push(`${a.area_m2} м²`);
         if (a.district) parts.push(a.district);
-        return parts.join(' · ') || '—';
+        return parts.join(' · ') || '';
     }
 </script>
 
@@ -101,13 +108,17 @@
                 {/if}
                 <div class="apt-body">
                     <div class="apt-head">
-                        <div class="title">{a.title}</div>
+                        <div class="title">{headline(a)}</div>
                         {#each [statusChip(a)] as s}
                             <Chip tone={s.tone}>{s.label}</Chip>
                         {/each}
                     </div>
-                    <div class="addr">{a.address}</div>
-                    <div class="meta">{metaLine(a)}</div>
+                    {#if a.callsign}
+                        <div class="callsign">{a.callsign}</div>
+                    {/if}
+                    {#if metaLine(a)}
+                        <div class="meta">{metaLine(a)}</div>
+                    {/if}
                     <div class="util-row">
                         <div class="bar">
                             <div class="bar-fill" style:width="{Math.round((a.utilization || 0) * 100)}%"></div>
@@ -169,9 +180,11 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    .addr {
-        font-size: 12px;
-        color: var(--muted);
+    .callsign {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--accent);
+        font-weight: 600;
         margin-bottom: 4px;
     }
     .meta {
