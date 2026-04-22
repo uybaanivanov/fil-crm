@@ -105,7 +105,9 @@
                         <button class="hist-row" onclick={() => goto(`/bookings/${b.id}`)} type="button">
                             <div class="hist-body">
                                 <div class="hist-dates">{fmtDate(b.check_in)} → {fmtDate(b.check_out)}</div>
-                                <div class="hist-apt">{b.apartment_title}</div>
+                                <div class="hist-apt">
+                                    {#if b.apartment_callsign}<span class="cs">{b.apartment_callsign}</span> · {/if}{b.apartment_title}
+                                </div>
                             </div>
                             <div class="hist-right">
                                 <div class="hist-sum">{fmtRub(b.total_price)}</div>
@@ -185,6 +187,7 @@
     .hist-body { flex: 1; min-width: 0; }
     .hist-dates { font-size: 13px; font-weight: 600; color: var(--ink); }
     .hist-apt { font-family: var(--font-mono); font-size: 10px; color: var(--faint); margin-top: 2px; text-transform: uppercase; }
+    .hist-apt .cs { color: var(--accent); font-weight: 600; }
     .hist-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
     .hist-sum { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--ink); }
 

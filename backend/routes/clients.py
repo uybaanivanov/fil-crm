@@ -106,7 +106,8 @@ def get_client(
         bookings = conn.execute(
             """
             SELECT b.id, b.check_in, b.check_out, b.total_price, b.status,
-                   a.title AS apartment_title, a.id AS apartment_id
+                   a.title AS apartment_title, a.id AS apartment_id,
+                   a.callsign AS apartment_callsign
             FROM bookings b JOIN apartments a ON a.id = b.apartment_id
             WHERE b.client_id = ?
             ORDER BY b.check_in DESC

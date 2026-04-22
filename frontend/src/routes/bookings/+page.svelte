@@ -13,6 +13,14 @@
     let loading = $state(true);
     let tab = $state('all');
 
+    const PAGE_SIZE = 50;
+    let visibleCount = $state(PAGE_SIZE);
+
+    function setTab(v) {
+        tab = v;
+        visibleCount = PAGE_SIZE;
+    }
+
     onMount(async () => {
         try {
             const [b, c] = await Promise.all([
@@ -43,13 +51,16 @@
                 out.push({ ...b, kind: 'check_out', date: b.check_out });
             }
         }
-        out.sort((a, b) => a.date.localeCompare(b.date));
+        out.sort((a, b) => b.date.localeCompare(a.date));
         return out;
     });
 
+    const visibleEvents = $derived(events.slice(0, visibleCount));
+    const hasMore = $derived(events.length > visibleCount);
+
     const groups = $derived.by(() => {
         const g = new Map();
-        for (const e of events) {
+        for (const e of visibleEvents) {
             if (!g.has(e.date)) g.set(e.date, []);
             g.get(e.date).push(e);
         }
@@ -87,7 +98,7 @@
 
 <div class="tabs">
     {#each tabs as t}
-        <button class="tab" class:active={t.active} type="button" onclick={() => (tab = t.value)}>
+        <button class="tab" class:active={t.active} type="button" onclick={() => setTab(t.value)}>
             {t.label}
         </button>
     {/each}
@@ -113,6 +124,13 @@
                             class="stripe"
                             style:background={ev.kind === 'check_in' ? 'var(--positive)' : 'var(--muted)'}
                         ></div>
+                        {#if ev.apartment_cover_url}
+                            <img class="thumb" src={ev.apartment_cover_url} alt="" />
+                        {:else}
+                            <div class="thumb placeholder">
+                                {(ev.apartment_callsign || ev.apartment_title || '?').slice(0, 2).toUpperCase()}
+                            </div>
+                        {/if}
                         <div class="ev-body">
                             <div class="ev-head">
                                 <span class="time">{ev.kind === 'check_in' ? '14:00' : '12:00'}</span>
@@ -122,7 +140,7 @@
                             </div>
                             <div class="name">{ev.client_name}</div>
                             <div class="meta">
-                                {ev.apartment_title} · {sourceOf(ev)}
+                                {#if ev.apartment_callsign}<span class="cs">{ev.apartment_callsign}</span> · {/if}{ev.apartment_title} · {sourceOf(ev)}
                             </div>
                         </div>
                         <div class="ev-right">
@@ -135,6 +153,19 @@
             </div>
         </div>
     {/each}
+    {#if hasMore}
+        <div class="more">
+            <button
+                class="more-btn"
+                type="button"
+                onclick={() => (visibleCount += PAGE_SIZE)}
+            >
+                Показать ещё · {events.length - visibleCount} осталось
+            </button>
+        </div>
+    {:else if events.length > PAGE_SIZE}
+        <div class="more-done">Всё · {events.length}</div>
+    {/if}
 {/if}
 
 <style>
@@ -183,15 +214,33 @@
     .items { display: flex; flex-direction: column; gap: 8px; }
     .ev {
         display: grid;
-        grid-template-columns: 4px 1fr auto;
-        gap: 12px;
+        grid-template-columns: 4px 44px 1fr auto;
+        gap: 10px;
         background: var(--card);
         border: 1px solid var(--border);
         border-radius: 8px;
-        padding: 11px 14px;
+        padding: 10px 12px;
         cursor: pointer;
         text-align: left;
+        align-items: center;
     }
+    .thumb {
+        width: 44px;
+        height: 44px;
+        border-radius: 6px;
+        object-fit: cover;
+        background: var(--bg-subtle);
+    }
+    .thumb.placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--faint);
+    }
+    .cs { color: var(--accent); font-weight: 600; }
     .ev:hover { background: var(--card-hi); }
     .stripe { border-radius: 2px; }
     .ev-head {
@@ -232,6 +281,28 @@
     .nights {
         font-family: var(--font-mono);
         font-size: 10px;
+        color: var(--faint);
+    }
+    .more { padding: 6px 20px 24px; }
+    .more-btn {
+        width: 100%;
+        height: 42px;
+        background: var(--card);
+        color: var(--ink);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+    }
+    .more-btn:hover { background: var(--card-hi); }
+    .more-done {
+        padding: 10px 20px 24px;
+        text-align: center;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
         color: var(--faint);
     }
 </style>

@@ -108,7 +108,7 @@
                     <select bind:value={addApartmentId}>
                         <option value="">Общий расход</option>
                         {#each apartments as a}
-                            <option value={String(a.id)}>{a.title}</option>
+                            <option value={String(a.id)}>{a.callsign || a.title}</option>
                         {/each}
                     </select>
                 </label>
@@ -188,7 +188,9 @@
                 <Card pad={0}>
                     {#each data.by_apartment as row, i}
                         <div class="apt-row" class:last={i === data.by_apartment.length - 1}>
-                            <a class="name" href={`/apartments/${row.apartment_id}`}>{row.title}</a>
+                            <a class="name" href={`/apartments/${row.apartment_id}`} title={row.title}>
+                                <span class="cs">{row.callsign || row.title}</span>
+                            </a>
                             <span class="rev">{fmtShortRub(row.revenue)}</span>
                             <span class="exp">−{fmtShortRub(row.expenses_total)}</span>
                             <span class="net" class:pos={row.net >= 0} class:neg={row.net < 0}>
@@ -399,6 +401,7 @@
     }
     .apt-row.last { border-bottom: none; }
     .apt-row .name { color: var(--ink); text-decoration: none; }
+    .apt-row .name .cs { color: var(--accent); font-weight: 600; font-family: var(--font-mono); font-size: 11px; }
     .apt-row .rev { color: var(--positive, #2a8); text-align: right; font-family: var(--font-mono); }
     .apt-row .exp { color: var(--danger, #c33); text-align: right; font-family: var(--font-mono); }
     .apt-row .net { text-align: right; font-family: var(--font-mono); font-weight: 600; }

@@ -29,7 +29,7 @@ def summary(
         expenses = [
             dict(r) for r in conn.execute(
                 "SELECT e.id, e.amount, e.category, e.description, e.occurred_at, "
-                "e.apartment_id, e.source, a.title AS apartment_title "
+                "e.apartment_id, e.source, a.title AS apartment_title, a.callsign AS apartment_callsign "
                 "FROM expenses e LEFT JOIN apartments a ON a.id = e.apartment_id "
                 "WHERE substr(e.occurred_at, 1, 7) = ? ORDER BY e.occurred_at DESC",
                 (ym,),
@@ -37,7 +37,7 @@ def summary(
         ]
         apartments = [
             dict(r) for r in conn.execute(
-                "SELECT id, title FROM apartments"
+                "SELECT id, title, callsign FROM apartments"
             ).fetchall()
         ]
     agg = aggregate_bookings_in_period(bookings, p_start, p_end)
@@ -51,7 +51,7 @@ def summary(
     by_apt_map: dict[int, dict] = {}
     for a in apartments:
         by_apt_map[a["id"]] = {
-            "apartment_id": a["id"], "title": a["title"],
+            "apartment_id": a["id"], "title": a["title"], "callsign": a["callsign"],
             "revenue": 0, "expenses_total": 0, "net": 0,
         }
     for apt_id, row in by_apt_map.items():
@@ -84,6 +84,7 @@ def summary(
             "ref": {"expense_id": e["id"]},
             "apartment_id": e["apartment_id"],
             "apartment_title": e["apartment_title"],
+            "apartment_callsign": e["apartment_callsign"],
             "source": e["source"],
         })
     feed.sort(key=lambda x: x["dt"], reverse=True)

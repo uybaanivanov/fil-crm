@@ -24,6 +24,13 @@ class ApartmentIn(BaseModel):
     source_url: str | None = None
     monthly_rent: int | None = Field(default=None, ge=0)
     monthly_utilities: int | None = Field(default=None, ge=0)
+    entrance: str | None = None
+    apt_number: str | None = None
+    intercom_code: str | None = None
+    safe_code: str | None = None
+    utility_account: str | None = None
+    price_weekday: int | None = Field(default=None, ge=0)
+    price_weekend: int | None = Field(default=None, ge=0)
 
 
 class ApartmentPatch(BaseModel):
@@ -40,6 +47,13 @@ class ApartmentPatch(BaseModel):
     source_url: str | None = None
     monthly_rent: int | None = Field(default=None, ge=0)
     monthly_utilities: int | None = Field(default=None, ge=0)
+    entrance: str | None = None
+    apt_number: str | None = None
+    intercom_code: str | None = None
+    safe_code: str | None = None
+    utility_account: str | None = None
+    price_weekday: int | None = Field(default=None, ge=0)
+    price_weekend: int | None = Field(default=None, ge=0)
 
 
 class CleaningDueIn(BaseModel):
@@ -49,7 +63,9 @@ class CleaningDueIn(BaseModel):
 SELECT_FIELDS = (
     "id, title, address, price_per_night, needs_cleaning, cleaning_due_at, "
     "cover_url, rooms, area_m2, floor, district, callsign, source, source_url, "
-    "monthly_rent, monthly_utilities, created_at"
+    "monthly_rent, monthly_utilities, "
+    "entrance, apt_number, intercom_code, safe_code, utility_account, "
+    "price_weekday, price_weekend, created_at"
 )
 
 

@@ -87,7 +87,13 @@
             <!-- rows -->
             {#each apartments as a, ai}
                 <div class="row">
-                    <div class="name-col">{a.title}</div>
+                    <div class="name-col" title={a.title}>
+                        {#if a.callsign}
+                            <span class="cs">{a.callsign}</span>
+                        {:else}
+                            {a.title}
+                        {/if}
+                    </div>
                     {#each days as d, i}
                         {@const dt = d.toISOString().slice(0, 10)}
                         <div class="cell" class:today={dt === todayISO}></div>
@@ -210,4 +216,10 @@
     }
     .leg-item { display: inline-flex; align-items: center; gap: 5px; }
     .leg-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+    .cs {
+        font-family: var(--font-mono);
+        color: var(--accent);
+        font-weight: 600;
+        font-size: 11px;
+    }
 </style>

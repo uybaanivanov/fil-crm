@@ -44,7 +44,7 @@ def reports(
     p_start, p_end = _period_bounds(period)
     days = (p_end - p_start).days
     with get_conn() as conn:
-        apts = conn.execute("SELECT id, title FROM apartments ORDER BY id").fetchall()
+        apts = conn.execute("SELECT id, title, callsign FROM apartments ORDER BY id").fetchall()
         all_bookings = conn.execute(
             "SELECT apartment_id, check_in, check_out, total_price, status FROM bookings "
             "WHERE check_out > ? AND check_in < ? AND status != 'cancelled'",
@@ -68,6 +68,7 @@ def reports(
             {
                 "apartment_id": a["id"],
                 "title": a["title"],
+                "callsign": a["callsign"],
                 "util": util,
                 "nights": agg["nights"],
                 "revenue": agg["revenue"],

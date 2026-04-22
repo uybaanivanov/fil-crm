@@ -17,5 +17,9 @@ tmux new-window -t "$SESSION" -n frontend -c "$ROOT/frontend"
 tmux send-keys -t "$SESSION:frontend" \
     'if [ -s "$HOME/.nvm/nvm.sh" ]; then . "$HOME/.nvm/nvm.sh"; nvm use node >/dev/null; fi; npm run dev -- --port 5173' C-m
 
-echo "Сессия tmux '$SESSION' запущена: backend :8000, frontend :5173."
+tmux new-window -t "$SESSION" -n worker -c "$ROOT"
+tmux send-keys -t "$SESSION:worker" \
+    "uv run --env-file .env python -m backend.worker" C-m
+
+echo "Сессия tmux '$SESSION' запущена: backend :8000, frontend :5173, worker."
 echo "Подключиться: tmux attach -t $SESSION"

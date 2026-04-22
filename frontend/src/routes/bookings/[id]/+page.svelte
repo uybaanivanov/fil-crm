@@ -3,12 +3,16 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { api } from '$lib/api.js';
+    import { getUser } from '$lib/auth.js';
     import PageHead from '$lib/ui/PageHead.svelte';
     import Card from '$lib/ui/Card.svelte';
     import Section from '$lib/ui/Section.svelte';
     import Chip from '$lib/ui/Chip.svelte';
     import Avatar from '$lib/ui/Avatar.svelte';
     import { fmtRub, fmtDate, fmtDateFull, fmtNights } from '$lib/format.js';
+
+    const me = getUser();
+    const canDelete = me?.role === 'owner';
 
     const bookingId = $derived(parseInt(page.params.id, 10));
 
@@ -54,6 +58,16 @@
         try {
             await api.patch(`/bookings/${bookingId}`, { status: 'cancelled' });
             await load();
+        } catch (e) {
+            error = e.message;
+        }
+    }
+
+    async function remove() {
+        if (!confirm(`Удалить бронь #${bookingId} безвозвратно? Это действие нельзя отменить.`)) return;
+        try {
+            await api.delete(`/bookings/${bookingId}`);
+            goto('/bookings');
         } catch (e) {
             error = e.message;
         }
@@ -168,6 +182,14 @@
             <div class="closed">{statusLabel(booking.status).toUpperCase()}</div>
         {/if}
     </div>
+
+    {#if canDelete}
+        <div class="danger-zone">
+            <button class="danger" type="button" onclick={remove}>
+                Удалить бронь безвозвратно
+            </button>
+        </div>
+    {/if}
 {/if}
 
 <style>
@@ -302,5 +324,25 @@
         letter-spacing: 0.08em;
         background: var(--bg-subtle);
         border-radius: 6px;
+    }
+    .danger-zone {
+        padding: 0 20px 24px;
+        margin-top: 8px;
+        border-top: 1px solid var(--border-soft);
+        padding-top: 16px;
+    }
+    .danger {
+        width: 100%;
+        height: 42px;
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .danger:hover {
+        background: var(--danger-bg);
     }
 </style>

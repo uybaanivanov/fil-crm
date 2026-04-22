@@ -1,5 +1,6 @@
 <script>
     import { onMount } from 'svelte';
+    import { goto } from '$app/navigation';
     import { api } from '$lib/api.js';
     import { getUser } from '$lib/auth.js';
     import PageHead from '$lib/ui/PageHead.svelte';
@@ -86,11 +87,20 @@
                 </Card>
             {:else}
                 {#each data.today_events as ev}
-                    <div class="event">
-                        <div class="time">{ev.time}</div>
+                    <button class="event" type="button" onclick={() => goto(`/bookings/${ev.booking_id}`)}>
+                        {#if ev.apartment_cover_url}
+                            <img class="thumb" src={ev.apartment_cover_url} alt="" />
+                        {:else}
+                            <div class="thumb placeholder">
+                                {(ev.apartment_callsign || ev.apartment_title || '?').slice(0, 2).toUpperCase()}
+                            </div>
+                        {/if}
                         <div class="event-body">
-                            <div class="kind {ev.kind}">{ev.kind === 'check_in' ? 'Заезд' : 'Выезд'} · {ev.client_name}</div>
-                            <div class="addr">{ev.apartment_address}</div>
+                            <div class="kind {ev.kind}">{ev.time} · {ev.client_name}</div>
+                            <div class="addr">
+                                {#if ev.apartment_callsign}<span class="callsign">{ev.apartment_callsign}</span> · {/if}
+                                {ev.apartment_address}
+                            </div>
                         </div>
                         <div class="event-right">
                             {#if ev.total_price != null}
@@ -100,7 +110,7 @@
                                 {ev.kind === 'check_in' ? 'заезд' : 'выезд'}
                             </Chip>
                         </div>
-                    </div>
+                    </button>
                 {/each}
             {/if}
         </div>
@@ -149,20 +159,38 @@
     .chart-axis .today { color: var(--accent); }
     .events { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
     .event {
+        width: 100%;
         background: var(--card);
         border: 1px solid var(--border);
         border-radius: 8px;
-        padding: 11px 14px;
+        padding: 10px 12px;
         display: grid;
-        grid-template-columns: 48px 1fr auto;
+        grid-template-columns: 44px 1fr auto;
         gap: 10px;
         align-items: center;
+        cursor: pointer;
+        text-align: left;
     }
-    .time {
+    .event:hover { background: var(--card-hi); }
+    .thumb {
+        width: 44px;
+        height: 44px;
+        border-radius: 6px;
+        object-fit: cover;
+        background: var(--bg-subtle);
+    }
+    .thumb.placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-family: var(--font-mono);
         font-size: 12px;
         font-weight: 600;
-        color: var(--ink);
+        color: var(--faint);
+    }
+    .callsign {
+        color: var(--accent);
+        font-weight: 600;
     }
     .kind { font-size: 13px; font-weight: 600; color: var(--ink); }
     .addr {

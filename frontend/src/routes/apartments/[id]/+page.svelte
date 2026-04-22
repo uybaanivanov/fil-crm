@@ -399,8 +399,11 @@
 
     <!-- Actions -->
     <div class="actions">
+        <button class="primary" type="button" onclick={() => goto(`/bookings/new?apartment_id=${aptId}`)}>
+            + Бронь
+        </button>
         {#if apt.needs_cleaning}
-            <button class="ghost" type="button" onclick={openCleaningDialog}>Изменить время уборки</button>
+            <button class="ghost" type="button" onclick={openCleaningDialog}>Изменить уборку</button>
             <button class="primary" type="button" onclick={markClean}>Закрыть уборку ✓</button>
         {:else}
             <button class="ghost" type="button" onclick={openCleaningDialog}>Требует уборки</button>

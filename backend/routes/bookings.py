@@ -56,7 +56,10 @@ def _row(conn, booking_id: int):
         """
         SELECT b.id, b.apartment_id, b.client_id, b.check_in, b.check_out,
                b.total_price, b.status, b.notes, b.created_at,
-               a.title AS apartment_title, c.full_name AS client_name
+               a.title AS apartment_title,
+               a.cover_url AS apartment_cover_url,
+               a.callsign AS apartment_callsign,
+               c.full_name AS client_name
         FROM bookings b
         JOIN apartments a ON a.id = b.apartment_id
         JOIN clients c ON c.id = b.client_id
@@ -73,7 +76,10 @@ def list_bookings(_: dict = Depends(require_role("owner", "admin"))):
             """
             SELECT b.id, b.apartment_id, b.client_id, b.check_in, b.check_out,
                    b.total_price, b.status, b.notes, b.created_at,
-                   a.title AS apartment_title, c.full_name AS client_name
+                   a.title AS apartment_title,
+                   a.cover_url AS apartment_cover_url,
+                   a.callsign AS apartment_callsign,
+                   c.full_name AS client_name
             FROM bookings b
             JOIN apartments a ON a.id = b.apartment_id
             JOIN clients c ON c.id = b.client_id
@@ -181,7 +187,7 @@ def update_booking(
 
 
 @router.delete("/{booking_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_booking(booking_id: int, _: dict = Depends(require_role("owner", "admin"))):
+def delete_booking(booking_id: int, _: dict = Depends(require_role("owner"))):
     with get_conn() as conn:
         cur = conn.execute("DELETE FROM bookings WHERE id = ?", (booking_id,))
     if cur.rowcount == 0:
@@ -199,7 +205,7 @@ def bookings_calendar(
 ):
     with get_conn() as conn:
         apartments = conn.execute(
-            "SELECT id, title FROM apartments ORDER BY id"
+            "SELECT id, title, callsign FROM apartments ORDER BY id"
         ).fetchall()
         bookings = conn.execute(
             """
@@ -213,8 +219,15 @@ def bookings_calendar(
             """,
             (to, from_),
         ).fetchall()
-    buckets = {a["id"]: {"apartment_id": a["id"], "apartment_title": a["title"], "bookings": []}
-               for a in apartments}
+    buckets = {
+        a["id"]: {
+            "apartment_id": a["id"],
+            "apartment_title": a["title"],
+            "apartment_callsign": a["callsign"],
+            "bookings": [],
+        }
+        for a in apartments
+    }
     for b in bookings:
         buckets[b["apartment_id"]]["bookings"].append(
             {

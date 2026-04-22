@@ -73,7 +73,9 @@
                         {@const pct = Math.round((a.util || 0) * 100)}
                         {@const color = pct > 80 ? 'var(--positive)' : pct > 65 ? 'var(--caution)' : 'var(--muted)'}
                         <div class="bar-row" class:last={i === data.per_apartment.length - 1}>
-                            <span class="bar-name">{a.title}</span>
+                            <span class="bar-name" title={a.title}>
+                                {#if a.callsign}<span class="cs">{a.callsign}</span>{:else}{a.title}{/if}
+                            </span>
                             <div class="bar">
                                 <div class="bar-fill" style:width="{pct}%" style:background={color}></div>
                             </div>
@@ -161,6 +163,7 @@
         overflow: hidden;
     }
     .bar-fill { height: 100%; }
+    .cs { font-family: var(--font-mono); color: var(--accent); font-weight: 600; }
     .bar-pct {
         font-family: var(--font-mono);
         font-size: 11px;

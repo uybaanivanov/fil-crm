@@ -43,7 +43,10 @@ def summary(_: dict = Depends(require_role("owner", "admin"))):
         events_rows = conn.execute(
             """
             SELECT b.id, b.check_in, b.check_out, b.total_price, b.status,
-                   c.full_name AS client_name, a.title AS apartment_title, a.address AS apartment_address
+                   c.full_name AS client_name,
+                   a.title AS apartment_title, a.address AS apartment_address,
+                   a.cover_url AS apartment_cover_url,
+                   a.callsign AS apartment_callsign
             FROM bookings b
             JOIN clients c ON c.id = b.client_id
             JOIN apartments a ON a.id = b.apartment_id
@@ -84,6 +87,8 @@ def summary(_: dict = Depends(require_role("owner", "admin"))):
                     "client_name": r["client_name"],
                     "apartment_title": r["apartment_title"],
                     "apartment_address": r["apartment_address"],
+                    "apartment_cover_url": r["apartment_cover_url"],
+                    "apartment_callsign": r["apartment_callsign"],
                     "total_price": r["total_price"],
                     "status": r["status"],
                 }
@@ -97,6 +102,8 @@ def summary(_: dict = Depends(require_role("owner", "admin"))):
                     "client_name": r["client_name"],
                     "apartment_title": r["apartment_title"],
                     "apartment_address": r["apartment_address"],
+                    "apartment_cover_url": r["apartment_cover_url"],
+                    "apartment_callsign": r["apartment_callsign"],
                     "total_price": r["total_price"],
                     "status": r["status"],
                 }
