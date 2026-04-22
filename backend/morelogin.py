@@ -40,7 +40,13 @@ async def start_profile(env_id: str | None = None) -> ProfileSession:
         raise MoreLoginError("MORELOGIN_ENV_ID не задан")
     async with httpx.AsyncClient(base_url=API_URL, timeout=TIMEOUT) as c:
         data = _unwrap(await c.post("/api/env/start", json={"envId": eid}))
-    port = int(data["debugPort"])
+    port_raw = data.get("debugPort")
+    if not port_raw:
+        raise MoreLoginError(f"start_profile: пустой debugPort в ответе: {data}")
+    try:
+        port = int(port_raw)
+    except (TypeError, ValueError) as e:
+        raise MoreLoginError(f"start_profile: не смог распарсить debugPort={port_raw!r}") from e
     return ProfileSession(env_id=eid, debug_port=port, cdp_url=f"http://127.0.0.1:{port}")
 
 
