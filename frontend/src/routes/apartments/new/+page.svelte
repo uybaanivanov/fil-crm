@@ -7,6 +7,7 @@
 
     const ROOMS_OPTIONS = ['Студия', '1-комн', '2-комн', '3+'];
 
+    let mode = $state('parse'); // 'parse' | 'manual'
     let url = $state('');
     let parsing = $state(false);
     let parseError = $state(null);
@@ -64,7 +65,8 @@
             const payload = {
                 title, address,
                 price_per_night: priceNum,
-                source, source_url: sourceUrl,
+                source: mode === 'manual' ? 'manual' : source,
+                source_url: mode === 'manual' ? null : sourceUrl,
             };
             if (rooms) payload.rooms = rooms;
             if (area) payload.area_m2 = parseInt(area, 10);
@@ -81,22 +83,29 @@
     }
 </script>
 
-<PageHead title="Новая квартира" sub="Вставь ссылку — разберём и покажем поля"
+<PageHead title="Новая квартира" sub={mode === 'parse' ? 'Вставь ссылку — разберём и покажем поля' : 'Заполни поля вручную'}
     back="Отмена" backOnClick={() => goto('/apartments')} />
 
-<div class="wrap">
-    <div class="eyebrow">Ссылка на объявление</div>
-    <input class="url-field" bind:value={url}
-        placeholder="https://doska.ykt.ru/... или https://youla.ru/..."
-        disabled={parsing} />
-    <div class="hint">Поддержка: <span class="mono">Доска.якт · Юла</span> (трекер-ссылки mail.ru резолвим).</div>
-    <button class="primary wide" type="button" onclick={doParse} disabled={parsing || !url.trim()}>
-        {parsing ? 'Разбираю…' : 'Разобрать'}
-    </button>
-    {#if parseError}<div class="error-banner">{parseError}</div>{/if}
+<div class="tabs">
+    <button class:active={mode === 'parse'} onclick={() => mode = 'parse'} type="button">По ссылке</button>
+    <button class:active={mode === 'manual'} onclick={() => mode = 'manual'} type="button">Вручную</button>
 </div>
 
-{#if listing}
+{#if mode === 'parse'}
+    <div class="wrap">
+        <div class="eyebrow">Ссылка на объявление</div>
+        <input class="url-field" bind:value={url}
+            placeholder="https://doska.ykt.ru/... или https://youla.ru/..."
+            disabled={parsing} />
+        <div class="hint">Поддержка: <span class="mono">Доска.якт · Юла</span> (трекер-ссылки mail.ru резолвим).</div>
+        <button class="primary wide" type="button" onclick={doParse} disabled={parsing || !url.trim()}>
+            {parsing ? 'Разбираю…' : 'Разобрать'}
+        </button>
+        {#if parseError}<div class="error-banner">{parseError}</div>{/if}
+    </div>
+{/if}
+
+{#if mode === 'manual' || listing}
     <Section title="Поля квартиры">
         <div class="wrap">
             <Card pad={14}>
@@ -152,6 +161,13 @@
 {/if}
 
 <style>
+    .tabs { display: flex; gap: 6px; padding: 0 20px 12px; }
+    .tabs button {
+        flex: 1; height: 36px;
+        background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+        font-size: 13px; color: var(--faint); cursor: pointer;
+    }
+    .tabs button.active { background: var(--ink); color: #fff; border-color: var(--ink); }
     .wrap { padding: 0 20px 14px; }
     .eyebrow {
         font-family: var(--font-mono); font-size: 10px;
