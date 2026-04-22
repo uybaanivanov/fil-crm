@@ -1,6 +1,8 @@
 import datetime
+import os
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 
 from backend.auth import require_role
@@ -313,6 +315,72 @@ def delete_apartment(apt_id: int, _: dict = Depends(require_role("owner", "admin
             status_code=status.HTTP_409_CONFLICT,
             detail="Нельзя удалить квартиру с привязанными бронями",
         )
+    return None
+
+
+def _media_root() -> Path:
+    return Path(os.environ.get("FIL_MEDIA_DIR") or (Path(__file__).resolve().parent.parent / "media"))
+
+
+_ALLOWED_COVER_TYPES = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+}
+_MAX_COVER_SIZE = 5 * 1024 * 1024
+
+
+@router.post("/{apt_id}/cover")
+async def upload_cover(
+    apt_id: int,
+    file: UploadFile = File(...),
+    _: dict = Depends(require_role("owner", "admin")),
+):
+    ext = _ALLOWED_COVER_TYPES.get(file.content_type or "")
+    if ext is None:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Поддерживаются только jpeg/png/webp",
+        )
+    data = await file.read()
+    if len(data) > _MAX_COVER_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Файл больше 5 МБ",
+        )
+    with get_conn() as conn:
+        if _row(conn, apt_id) is None:
+            raise HTTPException(status_code=404, detail="Квартира не найдена")
+        target_dir = _media_root() / "apartments" / str(apt_id)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        for old in target_dir.glob("cover.*"):
+            try:
+                old.unlink()
+            except OSError:
+                pass
+        target = target_dir / f"cover.{ext}"
+        target.write_bytes(data)
+        url = f"/media/apartments/{apt_id}/cover.{ext}"
+        conn.execute("UPDATE apartments SET cover_url = ? WHERE id = ?", (url, apt_id))
+    return {"cover_url": url}
+
+
+@router.delete("/{apt_id}/cover", status_code=status.HTTP_204_NO_CONTENT)
+def delete_cover(
+    apt_id: int,
+    _: dict = Depends(require_role("owner", "admin")),
+):
+    with get_conn() as conn:
+        if _row(conn, apt_id) is None:
+            raise HTTPException(status_code=404, detail="Квартира не найдена")
+        target_dir = _media_root() / "apartments" / str(apt_id)
+        if target_dir.exists():
+            for old in target_dir.glob("cover.*"):
+                try:
+                    old.unlink()
+                except OSError:
+                    pass
+        conn.execute("UPDATE apartments SET cover_url = NULL WHERE id = ?", (apt_id,))
     return None
 
 
