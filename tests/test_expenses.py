@@ -99,3 +99,43 @@ def test_create_expense_with_invalid_apartment_id(client):
         },
     )
     assert r.status_code == 400
+
+
+def test_list_expenses_filter_by_apartment(client):
+    u = seed_user(client, role="owner")
+    a1 = client.post("/apartments", headers=auth(u["id"]),
+                     json={"title": "A1", "address": "x", "price_per_night": 1000}).json()
+    a2 = client.post("/apartments", headers=auth(u["id"]),
+                     json={"title": "A2", "address": "x", "price_per_night": 1000}).json()
+    client.post("/expenses", headers=auth(u["id"]), json={
+        "amount": 100, "category": "x", "occurred_at": "2026-04-01", "apartment_id": a1["id"]})
+    client.post("/expenses", headers=auth(u["id"]), json={
+        "amount": 200, "category": "x", "occurred_at": "2026-04-02", "apartment_id": a2["id"]})
+    client.post("/expenses", headers=auth(u["id"]), json={
+        "amount": 300, "category": "x", "occurred_at": "2026-04-03"})
+    r = client.get(f"/expenses?apartment_id={a1['id']}", headers=auth(u["id"]))
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["amount"] == 100
+
+
+def test_list_expenses_only_general(client):
+    u = seed_user(client, role="owner")
+    a = client.post("/apartments", headers=auth(u["id"]),
+                    json={"title": "A", "address": "x", "price_per_night": 1000}).json()
+    client.post("/expenses", headers=auth(u["id"]), json={
+        "amount": 100, "category": "x", "occurred_at": "2026-04-01", "apartment_id": a["id"]})
+    client.post("/expenses", headers=auth(u["id"]), json={
+        "amount": 200, "category": "x", "occurred_at": "2026-04-02"})
+    r = client.get("/expenses?only_general=true", headers=auth(u["id"]))
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["amount"] == 200
+
+
+def test_list_expenses_mutually_exclusive_filters(client):
+    u = seed_user(client, role="owner")
+    r = client.get("/expenses?apartment_id=1&only_general=true", headers=auth(u["id"]))
+    assert r.status_code == 400

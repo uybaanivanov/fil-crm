@@ -47,20 +47,31 @@ def _assert_apartment_exists(conn, apt_id: int | None):
 @router.get("")
 def list_expenses(
     month: str | None = Query(None, pattern=r"^\d{4}-\d{2}$"),
+    apartment_id: int | None = Query(None),
+    only_general: bool = Query(False),
     _: dict = Depends(require_role("owner", "admin")),
 ):
+    if apartment_id is not None and only_general:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="apartment_id и only_general взаимоисключающие",
+        )
+    where = []
+    params: list = []
+    if month:
+        where.append("substr(occurred_at, 1, 7) = ?")
+        params.append(month)
+    if apartment_id is not None:
+        where.append("apartment_id = ?")
+        params.append(apartment_id)
+    if only_general:
+        where.append("apartment_id IS NULL")
+    sql = f"SELECT {FIELDS} FROM expenses"
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY occurred_at DESC"
     with get_conn() as conn:
-        if month:
-            rows = conn.execute(
-                f"SELECT {FIELDS} FROM expenses "
-                "WHERE substr(occurred_at, 1, 7) = ? "
-                "ORDER BY occurred_at DESC",
-                (month,),
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                f"SELECT {FIELDS} FROM expenses ORDER BY occurred_at DESC"
-            ).fetchall()
+        rows = conn.execute(sql, params).fetchall()
     return [dict(r) for r in rows]
 
 
