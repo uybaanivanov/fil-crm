@@ -11,6 +11,7 @@
     import CleaningDueDialog from '$lib/ui/CleaningDueDialog.svelte';
     import EditableField from '$lib/ui/EditableField.svelte';
     import ApartmentExpenses from '$lib/ui/ApartmentExpenses.svelte';
+    import InlineEdit from '$lib/ui/InlineEdit.svelte';
     import {
         fmtRub, fmtShortRub, fmtDate, fmtNights, fmtMonth,
         fmtDateTime, defaultCleaningDueAt, datetimeLocalToIso, isoToDatetimeLocal
@@ -34,6 +35,8 @@
     let baselineUtilities = $state('');
     let baselineError = $state(null);
     let baselineErrorField = $state(null); // 'rent' | 'utilities' | null
+    let baselineRequired = $state(false);
+    let baselineBlockEl = $state(null);
 
     const isOverdue = $derived(
         apt?.cleaning_due_at && new Date(apt.cleaning_due_at) < new Date()
@@ -89,10 +92,28 @@
                 monthly_rent: rent,
                 monthly_utilities: util,
             });
+            baselineRequired = false;
             editingBaseline = false;
             await load();
         } catch (e) {
             baselineError = e.message;
+        }
+    }
+
+    async function patchField(field, value) {
+        try {
+            await api.patch(`/apartments/${aptId}`, { [field]: value });
+            apt[field] = value;
+            baselineRequired = false;
+        } catch (e) {
+            const msg = e?.message || '';
+            if (msg.includes('monthly_rent') || msg.includes('monthly_utilities')) {
+                baselineRequired = true;
+                queueMicrotask(() => {
+                    baselineBlockEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            }
+            throw e;
         }
     }
 
@@ -198,6 +219,12 @@
         </Section>
     {/if}
 
+    {#if baselineRequired}
+        <div class="baseline-banner">
+            Сначала заполни обязательные суммы (аренда/ЖКХ) ниже — без них нельзя редактировать другие поля.
+        </div>
+    {/if}
+    <div bind:this={baselineBlockEl}>
     <Section title="Обязательные суммы">
         <div class="wrap">
             <Card pad={14}>
@@ -244,6 +271,7 @@
             </Card>
         </div>
     </Section>
+    </div>
 
     <Section title="Расходы">
         <ApartmentExpenses apartmentId={aptId} />
@@ -438,5 +466,14 @@
         color: var(--danger, #c33);
         padding: 6px 8px; border-radius: 4px;
         font-size: 12px;
+    }
+    .baseline-banner {
+        margin: 0 20px 12px;
+        padding: 10px 12px;
+        background: var(--danger-bg, #fde);
+        color: var(--danger, #c33);
+        border-radius: 6px;
+        font-size: 12px;
+        line-height: 1.4;
     }
 </style>
