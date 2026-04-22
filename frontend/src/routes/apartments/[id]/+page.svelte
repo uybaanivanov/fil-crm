@@ -281,25 +281,118 @@
     <Section title="Характеристики">
         <div class="wrap">
             <Card pad={0}>
-                {@const rows = [
-                    ['Тип', apt.rooms || '—'],
-                    ['Площадь', apt.area_m2 ? apt.area_m2 + ' м²' : '—'],
-                    ['Этаж', apt.floor || '—'],
-                    ['Район', apt.district || '—'],
-                    ['Цена/ночь', fmtRub(apt.price_per_night)],
-                    ['Нужна уборка', apt.needs_cleaning
-                        ? (apt.cleaning_due_at ? 'К ' + fmtDateTime(apt.cleaning_due_at) : 'Да')
-                        : 'Нет']
-                ]}
-                {#each rows as [k, v], i}
-                    <div class="ch-row" class:last={i === rows.length - 1}>
-                        <span class="ch-key">{k}</span>
-                        <span class="ch-val">{v}</span>
-                        {#if k === 'Нужна уборка' && isOverdue}
-                            <span class="overdue"><Chip tone="late">Просрочено</Chip></span>
-                        {/if}
-                    </div>
-                {/each}
+                <div class="ch-row">
+                    <span class="ch-key">Название</span>
+                    <span class="ch-val">
+                        <InlineEdit
+                            value={apt.title}
+                            type="text"
+                            placeholder="Название"
+                            onSave={v => patchField('title', v)}
+                        />
+                    </span>
+                </div>
+                <div class="ch-row">
+                    <span class="ch-key">Адрес</span>
+                    <span class="ch-val">
+                        <InlineEdit
+                            value={apt.address}
+                            type="text"
+                            placeholder="Адрес"
+                            onSave={v => patchField('address', v)}
+                        />
+                    </span>
+                </div>
+                <div class="ch-row">
+                    <span class="ch-key">Тип</span>
+                    <span class="ch-val">
+                        <InlineEdit
+                            value={apt.rooms}
+                            type="text"
+                            placeholder="Напр. 1-комн"
+                            onSave={v => patchField('rooms', v)}
+                        />
+                    </span>
+                </div>
+                <div class="ch-row">
+                    <span class="ch-key">Площадь</span>
+                    <span class="ch-val">
+                        <InlineEdit
+                            value={apt.area_m2}
+                            type="number"
+                            placeholder="— м²"
+                            format={v => v + ' м²'}
+                            onSave={v => patchField('area_m2', v)}
+                        />
+                    </span>
+                </div>
+                <div class="ch-row">
+                    <span class="ch-key">Этаж</span>
+                    <span class="ch-val">
+                        <InlineEdit
+                            value={apt.floor}
+                            type="text"
+                            placeholder="Этаж"
+                            onSave={v => patchField('floor', v)}
+                        />
+                    </span>
+                </div>
+                <div class="ch-row">
+                    <span class="ch-key">Район</span>
+                    <span class="ch-val">
+                        <InlineEdit
+                            value={apt.district}
+                            type="text"
+                            placeholder="Район"
+                            onSave={v => patchField('district', v)}
+                        />
+                    </span>
+                </div>
+                <div class="ch-row">
+                    <span class="ch-key">Цена/ночь</span>
+                    <span class="ch-val">
+                        <InlineEdit
+                            value={apt.price_per_night}
+                            type="number"
+                            placeholder="₽"
+                            format={fmtRub}
+                            onSave={v => patchField('price_per_night', v)}
+                        />
+                    </span>
+                </div>
+                <div class="ch-row">
+                    <span class="ch-key">Позывной</span>
+                    <span class="ch-val">
+                        <InlineEdit
+                            value={apt.callsign}
+                            type="text"
+                            placeholder="позывной"
+                            onSave={v => patchField('callsign', v)}
+                        />
+                    </span>
+                </div>
+                <div class="ch-row">
+                    <span class="ch-key">Обложка</span>
+                    <span class="ch-val">
+                        <InlineEdit
+                            value={apt.cover_url}
+                            type="text"
+                            placeholder="URL картинки"
+                            onSave={v => patchField('cover_url', v)}
+                        />
+                    </span>
+                </div>
+                <div class="ch-row last">
+                    <span class="ch-key">Нужна уборка</span>
+                    <span class="ch-val">
+                        {apt.needs_cleaning
+                            ? (apt.cleaning_due_at ? 'К ' + fmtDateTime(apt.cleaning_due_at) : 'Да')
+                            : 'Нет'}
+                    </span>
+                    {#if isOverdue}
+                        <span class="overdue"><Chip tone="late">Просрочено</Chip></span>
+                    {/if}
+                </div>
             </Card>
         </div>
     </Section>
