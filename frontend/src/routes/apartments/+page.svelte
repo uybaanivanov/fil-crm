@@ -108,7 +108,12 @@
                 {/if}
                 <div class="apt-body">
                     <div class="apt-head">
-                        <div class="title">{headline(a)}</div>
+                        <div class="title">
+                            {headline(a)}
+                            {#if a.monthly_rent == null || a.monthly_utilities == null}
+                                <span class="no-baseline" title="Не заполнен baseline (аренда/ЖКХ)">⚠</span>
+                            {/if}
+                        </div>
                         {#each [statusChip(a)] as s}
                             <Chip tone={s.tone}>{s.label}</Chip>
                         {/each}
@@ -208,6 +213,7 @@
         overflow: hidden;
     }
     .bar-fill { height: 100%; background: var(--accent); }
+    .no-baseline { color: var(--caution, #e80); margin-left: 6px; }
     .util-num {
         font-family: var(--font-mono);
         font-size: 10px;
