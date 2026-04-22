@@ -16,6 +16,8 @@ class ApartmentIn(BaseModel):
     floor: str | None = None
     district: str | None = None
     cover_url: str | None = None
+    source: str | None = None
+    source_url: str | None = None
 
 
 class ApartmentPatch(BaseModel):
@@ -27,11 +29,13 @@ class ApartmentPatch(BaseModel):
     floor: str | None = None
     district: str | None = None
     cover_url: str | None = None
+    source: str | None = None
+    source_url: str | None = None
 
 
 SELECT_FIELDS = (
     "id, title, address, price_per_night, needs_cleaning, "
-    "cover_url, rooms, area_m2, floor, district, created_at"
+    "cover_url, rooms, area_m2, floor, district, source, source_url, created_at"
 )
 
 
@@ -149,15 +153,26 @@ def apartment_stats(
 def create_apartment(
     payload: ApartmentIn, _: dict = Depends(require_role("owner", "admin"))
 ):
+    import sqlite3
+
     fields = payload.model_dump()
     cols = ", ".join(fields.keys())
     placeholders = ", ".join("?" * len(fields))
-    with get_conn() as conn:
-        cur = conn.execute(
-            f"INSERT INTO apartments ({cols}) VALUES ({placeholders})",
-            list(fields.values()),
-        )
-        row = _row(conn, cur.lastrowid)
+    try:
+        with get_conn() as conn:
+            cur = conn.execute(
+                f"INSERT INTO apartments ({cols}) VALUES ({placeholders})",
+                list(fields.values()),
+            )
+            row = _row(conn, cur.lastrowid)
+    except sqlite3.IntegrityError as e:
+        msg = str(e)
+        if "apartments_source_url_uniq" in msg or "apartments.source_url" in msg:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Квартира с такой ссылкой уже есть",
+            )
+        raise
     return dict(row)
 
 

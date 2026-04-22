@@ -129,6 +129,30 @@ def test_apartment_stats_one_booking(client):
     assert abs(body["utilization"] - 0.1) < 1e-6
 
 
+def test_apartment_source_url_unique(client):
+    u = seed_user(client, role="owner", name="Айсен")
+    h = auth(u["id"])
+    payload = {
+        "title": "Т1", "address": "А1", "price_per_night": 1000,
+        "source": "doska_ykt",
+        "source_url": "https://doska.ykt.ru/12345",
+    }
+    r1 = client.post("/apartments", json=payload, headers=h)
+    assert r1.status_code == 201
+    assert r1.json()["source"] == "doska_ykt"
+    assert r1.json()["source_url"] == "https://doska.ykt.ru/12345"
+    r2 = client.post("/apartments", json=payload, headers=h)
+    assert r2.status_code == 409
+
+
+def test_apartment_without_source_url_ok(client):
+    u = seed_user(client, role="owner", name="Айсен")
+    h = auth(u["id"])
+    r1 = client.post("/apartments", json={"title": "X", "address": "Y", "price_per_night": 100}, headers=h)
+    r2 = client.post("/apartments", json={"title": "X2", "address": "Y2", "price_per_night": 200}, headers=h)
+    assert r1.status_code == 201 and r2.status_code == 201
+
+
 def test_list_with_stats_includes_utilization_and_status(client):
     u = _owner(client)
     apt = _apt_with_price(client, u["id"], 4000)
