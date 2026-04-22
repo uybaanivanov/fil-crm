@@ -7,6 +7,7 @@
     import Card from '$lib/ui/Card.svelte';
     import Section from '$lib/ui/Section.svelte';
     import Avatar from '$lib/ui/Avatar.svelte';
+    import AddBtn from '$lib/ui/AddBtn.svelte';
     import { fmtRole } from '$lib/format.js';
 
     let users = $state([]);
@@ -43,6 +44,12 @@
 
 <PageHead title="Команда" sub="{users.length} пользователей"
     back="Настройки" backOnClick={() => goto('/settings')} />
+
+{#if me?.role === 'owner'}
+    <div class="add-row">
+        <AddBtn onclick={() => goto('/users/new')} title="Добавить пользователя" />
+    </div>
+{/if}
 
 {#if error}
     <div class="error-banner">{error}</div>
@@ -89,6 +96,7 @@
 {/if}
 
 <style>
+    .add-row { padding: 12px 20px 4px; display: flex; justify-content: flex-end; }
     .wrap { padding: 0 20px 14px; }
     .loading { padding: 40px 20px; color: var(--faint); text-align: center; }
     .row {
