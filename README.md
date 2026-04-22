@@ -49,6 +49,10 @@ uv run --env-file .env scripts/generate_baseline_expenses.py --month 2026-04
 0 6 * * * cd /opt/fil-crm && uv run --env-file .env python scripts/refresh_rates.py
 ```
 
+## Прод (sakha.gay)
+
+Конфиг nginx — `docs/nginx-sakha-gay.conf`. Маппит `/media/` напрямую на `/opt/fil-crm/backend/media/`, остальное проксирует на FastAPI на 127.0.0.1:8000.
+
 ## Примечания
 
 Это прототип. Аутентификации по паролю нет — юзер просто выбирается из списка. Не для продакшена.
