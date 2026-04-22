@@ -25,11 +25,19 @@ export function getRates() {
 
 export async function refreshRatesIfStale(api) {
     if (typeof localStorage === 'undefined') return;
+    const today = new Date().toISOString().slice(0, 10);
+    // sessionStorage-флаг защищает от повторного запроса в одной сессии
+    // (если localStorage заблокирован Safari private — refresh бил бы каждый mount)
+    try {
+        if (sessionStorage.getItem('fil_rates_tried') === today) return;
+        sessionStorage.setItem('fil_rates_tried', today);
+    } catch {
+        // sessionStorage тоже может бросать — тогда refresh уйдёт один раз за mount, не критично
+    }
     const cached = (() => {
         try { return JSON.parse(localStorage.getItem(RATES_KEY) || '{}'); }
         catch { return {}; }
     })();
-    const today = new Date().toISOString().slice(0, 10);
     if (cached.updated_at === today) return;
     try {
         const r = await api.get('/currency/rates');

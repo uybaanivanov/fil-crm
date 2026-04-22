@@ -22,7 +22,6 @@
 
     onMount(() => {
         cur = getCurrency();
-        refreshRatesIfStale(api);
         user = getUser();
         const path = page.url.pathname;
         if (!user && !isPublic(path)) {
@@ -33,6 +32,8 @@
             goto(user.role === 'maid' ? '/cleaning' : '/');
             return;
         }
+        // refresh курсов только для авторизованных юзеров — на /login не бьём API
+        refreshRatesIfStale(api);
         ready = true;
     });
 
