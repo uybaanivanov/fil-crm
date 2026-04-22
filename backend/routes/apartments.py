@@ -203,6 +203,8 @@ async def _fetch_and_parse(url: str):
     final_url = resolve_final_url(url)
     resolve_source(final_url)
 
+    import logging
+
     session = await morelogin.start_profile()
     try:
         async with async_playwright() as p:
@@ -217,7 +219,10 @@ async def _fetch_and_parse(url: str):
             await page.close()
         return parse_html(html, final_url)
     finally:
-        await morelogin.stop_profile()
+        try:
+            await morelogin.stop_profile()
+        except Exception as stop_err:
+            logging.warning("morelogin stop_profile failed: %s", stop_err)
 
 
 @router.post("/parse-url")
