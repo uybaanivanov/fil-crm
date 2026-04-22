@@ -8,6 +8,7 @@
     import Section from '$lib/ui/Section.svelte';
     import Searchbar from '$lib/ui/Searchbar.svelte';
     import Avatar from '$lib/ui/Avatar.svelte';
+    import ApartmentPicker from '$lib/ui/ApartmentPicker.svelte';
     import { fmtRub, fmtNights } from '$lib/format.js';
 
     // Quick-param support: /bookings/new?client_id=N&apartment_id=M
@@ -129,24 +130,12 @@
 <!-- Apartment picker -->
 <Section title="Квартира">
     <div class="wrap">
-        {#if apt}
-            <button class="selected" type="button" onclick={() => (apartmentId = null)}>
-                <div class="sel-label">
-                    <div class="sel-title">{apt.title}</div>
-                    <div class="sel-meta">{apt.address}</div>
-                </div>
-                <span class="change">Сменить</span>
-            </button>
-        {:else}
-            <div class="apt-list">
-                {#each apartments as a}
-                    <button class="pick" onclick={() => (apartmentId = a.id)} type="button">
-                        <div class="pick-t">{a.title}</div>
-                        <div class="pick-m">{a.address} · {fmtRub(a.price_per_night)}/ноч</div>
-                    </button>
-                {/each}
-            </div>
-        {/if}
+        <ApartmentPicker
+            value={apartmentId}
+            check_in={checkIn}
+            check_out={checkOut}
+            onChange={(id) => { apartmentId = id; }}
+        />
     </div>
 </Section>
 

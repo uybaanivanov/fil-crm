@@ -84,15 +84,50 @@ def _row(conn, apt_id: int):
 def list_apartments(
     with_stats: int = Query(0),
     month: str | None = Query(None, pattern=r"^\d{4}-\d{2}$"),
+    q: str | None = Query(None),
+    check_in: str | None = Query(None),
+    check_out: str | None = Query(None),
     _: dict = Depends(require_role("owner", "admin")),
 ):
+    if check_in and check_out:
+        next_select = (
+            "(SELECT MIN(b.check_in) FROM bookings b"
+            " WHERE b.apartment_id = a.id"
+            "   AND b.status = 'active'"
+            "   AND b.check_out > ? AND b.check_in < ?) AS next_booked_from"
+        )
+        next_params: list = [check_in, check_out]
+    else:
+        next_select = "NULL AS next_booked_from"
+        next_params = []
+
+    select_cols = ", ".join(f"a.{c}" for c in [
+        "id", "title", "address", "price_per_night", "needs_cleaning", "cleaning_due_at",
+        "cover_url", "rooms", "area_m2", "floor", "district", "callsign", "source", "source_url",
+        "monthly_rent", "monthly_utilities",
+        "entrance", "apt_number", "intercom_code", "safe_code", "utility_account",
+        "price_weekday", "price_weekend", "created_at",
+    ])
+
+    sql = (
+        f"SELECT {select_cols}, {next_select} FROM apartments a "
+        "ORDER BY (next_booked_from IS NULL) DESC, a.id ASC"
+    )
+    full_params = next_params
+
     with get_conn() as conn:
-        rows = conn.execute(
-            f"SELECT {SELECT_FIELDS} FROM apartments ORDER BY id"
-        ).fetchall()
+        rows = conn.execute(sql, full_params).fetchall()
         apts = [dict(r) for r in rows]
+        if q:
+            q_low = q.lower()
+            apts = [
+                a for a in apts
+                if q_low in (a.get("callsign") or "").lower()
+                or q_low in (a.get("address") or "").lower()
+            ]
         if not with_stats:
             return apts
+
         from datetime import date
 
         from backend.lib.stats import (
