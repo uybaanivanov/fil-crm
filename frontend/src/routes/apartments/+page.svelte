@@ -7,6 +7,10 @@
     import FilterChips from '$lib/ui/FilterChips.svelte';
     import AddBtn from '$lib/ui/AddBtn.svelte';
     import Chip from '$lib/ui/Chip.svelte';
+    import { getUser } from '$lib/auth.js';
+
+    const me = getUser();
+    const canAdd = me?.role === 'owner';
 
     let apartments = $state([]);
     let error = $state(null);
@@ -68,7 +72,9 @@
 
 <PageHead title="Квартиры" sub="{apartments.length} объектов · {counts.occupied} занято">
     {#snippet right()}
-        <AddBtn onclick={() => goto('/apartments/new')} />
+        {#if canAdd}
+            <AddBtn onclick={() => goto('/apartments/new')} />
+        {/if}
     {/snippet}
 </PageHead>
 
