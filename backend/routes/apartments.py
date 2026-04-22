@@ -1,7 +1,10 @@
 import datetime
 import os
+import time
+import uuid
 from pathlib import Path
 
+import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 
@@ -198,7 +201,26 @@ def create_apartment(
                 f"INSERT INTO apartments ({cols}) VALUES ({placeholders})",
                 list(fields.values()),
             )
-            row = _row(conn, cur.lastrowid)
+            new_id = cur.lastrowid
+            if payload.cover_url and payload.cover_url.startswith("/media/apartments/_pending/"):
+                from_path = _media_root() / "apartments" / "_pending" / Path(payload.cover_url).name
+                ext = from_path.suffix.lstrip(".")
+                if from_path.exists() and ext in _ALLOWED_COVER_TYPES.values():
+                    target_dir = _media_root() / "apartments" / str(new_id)
+                    target_dir.mkdir(parents=True, exist_ok=True)
+                    for old in target_dir.glob("cover.*"):
+                        try:
+                            old.unlink()
+                        except OSError:
+                            pass
+                    target = target_dir / f"cover.{ext}"
+                    from_path.rename(target)
+                    new_url = f"/media/apartments/{new_id}/cover.{ext}"
+                    conn.execute(
+                        "UPDATE apartments SET cover_url = ? WHERE id = ?",
+                        (new_url, new_id),
+                    )
+            row = _row(conn, new_id)
     except sqlite3.IntegrityError as e:
         msg = str(e)
         if "apartments_source_url_uniq" in msg or "apartments.source_url" in msg:
@@ -214,7 +236,7 @@ class ParseUrlIn(BaseModel):
     url: str = Field(min_length=1)
 
 
-async def _fetch_and_parse(url: str):
+async def _fetch_listing(url: str):
     """Резолв редиректа, старт MoreLogin, Playwright через CDP, парсер.
     Вынесено, чтобы тесты могли подменить через monkeypatch."""
     from urllib.parse import urlparse
@@ -257,13 +279,17 @@ async def parse_url(
     from backend.parsers import ParseError
 
     try:
-        listing = await _fetch_and_parse(payload.url)
+        listing = await _fetch_listing(payload.url)
     except UnsupportedSource as e:
         raise HTTPException(status_code=422, detail=f"unsupported_source: {e}")
     except ParseError as e:
         raise HTTPException(status_code=422, detail=f"parse_failed: {e}")
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"fetch_failed: {e}")
+    if listing.cover_url:
+        localized = _localize_cover(listing.cover_url)
+        if localized:
+            listing.cover_url = localized
     return listing.to_dict()
 
 
@@ -328,6 +354,33 @@ _ALLOWED_COVER_TYPES = {
     "image/webp": "webp",
 }
 _MAX_COVER_SIZE = 5 * 1024 * 1024
+
+
+def _localize_cover(src_url: str) -> str | None:
+    """Скачивает обложку с src_url в _pending/, возвращает локальный путь или None при ошибке."""
+    pending = _media_root() / "apartments" / "_pending"
+    pending.mkdir(parents=True, exist_ok=True)
+    # GC: удаляем файлы старше 24 ч
+    cutoff = time.time() - 24 * 3600
+    for old in pending.iterdir():
+        try:
+            if old.is_file() and old.stat().st_mtime < cutoff:
+                old.unlink()
+        except OSError:
+            pass
+    try:
+        with httpx.Client(timeout=10.0, follow_redirects=True) as c:
+            r = c.get(src_url)
+            r.raise_for_status()
+            ctype = (r.headers.get("content-type") or "").split(";")[0].strip().lower()
+            ext = _ALLOWED_COVER_TYPES.get(ctype)
+            if ext is None:
+                return None
+            name = f"{uuid.uuid4().hex}.{ext}"
+            (pending / name).write_bytes(r.content)
+            return f"/media/apartments/_pending/{name}"
+    except Exception:
+        return None
 
 
 @router.post("/{apt_id}/cover")

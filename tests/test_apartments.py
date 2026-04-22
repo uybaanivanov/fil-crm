@@ -264,7 +264,7 @@ def test_parse_url_returns_listing(client, monkeypatch):
             source="doska_ykt", source_url=url,
             title="Flat", address="Addr", price_per_night=3000,
         )
-    monkeypatch.setattr(apts_mod, "_fetch_and_parse", fake_fetch)
+    monkeypatch.setattr(apts_mod, "_fetch_listing", fake_fetch)
 
     u = seed_user(client, role="owner", name="Айсен")
     r = client.post(
