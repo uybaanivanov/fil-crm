@@ -12,6 +12,7 @@
     let ready = $state(false);
     let user = $state(null);
     let cur = $state('RUB');
+    let ratesRefreshed = false;
 
     // Пути, где TabBar скрыт (auth-flow) и guard'ы не действуют
     const PUBLIC = ['/login', '/dev_auth'];
@@ -22,9 +23,15 @@
 
     onMount(() => {
         cur = getCurrency();
-        user = getUser();
+    });
+
+    // Перечитываем сессию на каждой навигации — лэйаут в SPA не перемонтируется,
+    // так что onMount после login→goto не сработает и TabBar остаётся скрыт.
+    $effect(() => {
         const path = page.url.pathname;
+        user = getUser();
         if (!user && !isPublic(path)) {
+            ready = true;
             goto('/login');
             return;
         }
@@ -32,8 +39,10 @@
             goto(user.role === 'maid' ? '/cleaning' : '/');
             return;
         }
-        // refresh курсов только для авторизованных юзеров — на /login не бьём API
-        refreshRatesIfStale(api);
+        if (user && !ratesRefreshed) {
+            ratesRefreshed = true;
+            refreshRatesIfStale(api);
+        }
         ready = true;
     });
 
@@ -60,6 +69,7 @@
 <style>
 .cur-switch {
     position: fixed; top: 8px; right: 8px; z-index: 100;
+    width: auto;
     background: rgba(255,255,255,0.9);
     border: 1px solid var(--border, #ccc);
     border-radius: 6px; padding: 4px 8px;
