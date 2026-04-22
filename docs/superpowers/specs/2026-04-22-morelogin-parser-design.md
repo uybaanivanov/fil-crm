@@ -99,7 +99,7 @@ CREATE UNIQUE INDEX apartments_source_url_uniq ON apartments(source_url) WHERE s
 ### Интерактивные e2e-скрипты
 
 - Папка `tests/e2e/` удаляется (существует от прошлой итерации).
-- `tests/e2e_listing_urls.txt` — 14 ссылок из телеги (дамп для ручного copy-paste).
+- `tests/e2e_listing_urls.txt` — 14 ссылок из телеги (дамп для ручного copy-paste). **Временный файл**: удаляется из репо на последнем шаге плана, после того как все 14 квартир прогнаны через парсер.
 - `tests/e2e_morelogin_open.py` — интерактивно печатает «open profile 1? [y]», стартует профиль, выводит CDP URL, ждёт Enter, стопает. Smoke-проверка клиента.
 - `tests/e2e_parse_url.py` — `input("url: ")`, полный пайплайн (резолв → MoreLogin → Playwright → парсер), печатает `ParsedListing` в pretty-print. Это тот самый «следующий шаг» после дампа ссылок.
 - Запуск: `uv run --env-file .env python tests/e2e_<name>.py`. Pytest не подхватывает (нет префикса `test_`).
