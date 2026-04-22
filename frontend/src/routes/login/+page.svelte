@@ -1,21 +1,35 @@
 <script>
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
-    import { isDevPickerAvailable } from '$lib/api.js';
+    import { api, ApiError, isDevPickerAvailable } from '$lib/api.js';
+    import { setUser } from '$lib/auth.js';
 
     let devAvailable = $state(false);
-    let email = $state('aisen@fil-crm.ru');
+    let username = $state('');
     let password = $state('');
     let showPass = $state(false);
+    let busy = $state(false);
+    let error = $state(null);
 
     onMount(async () => {
         devAvailable = await isDevPickerAvailable();
     });
 
-    function submit(e) {
+    async function submit(e) {
         e.preventDefault();
-        // Декоративный экран — ничего не делаем.
-        // В проде здесь был бы POST /auth/login.
+        if (!username.trim() || !password) {
+            error = 'Введи логин и пароль'; return;
+        }
+        busy = true; error = null;
+        try {
+            const u = await api.post('/auth/login', { username: username.trim(), password }, { auth: false });
+            setUser(u);
+            goto(u.role === 'maid' ? '/cleaning' : '/');
+        } catch (e) {
+            error = e instanceof ApiError ? e.message : 'Ошибка сети';
+        } finally {
+            busy = false;
+        }
     }
 </script>
 
@@ -29,8 +43,8 @@
     <p class="sub">Войдите, чтобы управлять квартирами, бронями и уборкой.</p>
 
     <form onsubmit={submit}>
-        <label class="field-label" for="login-email">Телефон или e-mail</label>
-        <input id="login-email" type="email" bind:value={email} class="field" />
+        <label class="field-label" for="login-username">Логин</label>
+        <input id="login-username" type="text" bind:value={username} class="field" autocomplete="username" />
 
         <label class="field-label" for="login-pass">Пароль</label>
         <div class="pass-wrap">
@@ -40,15 +54,18 @@
                 bind:value={password}
                 class="field pass-input"
                 placeholder="••••••••"
+                autocomplete="current-password"
             />
             <button type="button" class="show" onclick={() => (showPass = !showPass)}>
                 {showPass ? 'Скрыть' : 'Показать'}
             </button>
         </div>
 
-        <button type="button" class="forgot">Забыли пароль?</button>
+        {#if error}<div class="login-err">{error}</div>{/if}
 
-        <button type="submit" class="primary-btn">Войти →</button>
+        <button type="submit" class="primary-btn" disabled={busy}>
+            {busy ? 'Входим…' : 'Войти →'}
+        </button>
     </form>
 
     {#if devAvailable}
@@ -144,17 +161,10 @@
         font-weight: 500;
         cursor: pointer;
     }
-    .forgot {
-        display: block;
+    .login-err {
         font-size: 13px;
-        color: var(--accent);
-        font-weight: 500;
-        margin-bottom: 24px;
-        background: transparent;
-        border: none;
-        padding: 0;
-        text-align: left;
-        cursor: pointer;
+        color: #c33;
+        margin-bottom: 16px;
     }
     .primary-btn {
         height: 50px;

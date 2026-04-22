@@ -16,6 +16,7 @@ from backend.routes import reports as reports_routes
 from backend.routes import expenses as expenses_routes
 from backend.routes import finance as finance_routes
 from backend.routes import currency as currency_routes
+from backend.routes import auth_login as auth_login_routes
 
 
 @asynccontextmanager
@@ -52,6 +53,7 @@ app.include_router(reports_routes.router)
 app.include_router(expenses_routes.router)
 app.include_router(finance_routes.router)
 app.include_router(currency_routes.router)
+app.include_router(auth_login_routes.router)
 
 
 @app.get("/health")

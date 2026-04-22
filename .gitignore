@@ -17,3 +17,4 @@ frontend/build
 account.session
 tg_dumps/
 backend/media/apartments/
+docs/prod_credentials.md
