@@ -283,11 +283,10 @@ def update_apartment(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Квартира не найдена"
             )
         merged_rent = fields.get("monthly_rent", current["monthly_rent"])
-        merged_util = fields.get("monthly_utilities", current["monthly_utilities"])
-        if merged_rent is None or merged_util is None:
+        if merged_rent is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="monthly_rent и monthly_utilities обязательны",
+                detail="monthly_rent обязателен",
             )
         set_clause = ", ".join(f"{k} = ?" for k in fields)
         values = list(fields.values()) + [apt_id]

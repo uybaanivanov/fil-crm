@@ -136,7 +136,8 @@ def test_patch_apartment_ok_when_baseline_already_in_db(client):
     assert r.status_code == 200
 
 
-def test_patch_apartment_fails_with_only_one_baseline_when_db_empty(client):
+def test_patch_apartment_ok_with_only_rent_no_utilities(client):
+    """PATCH с только monthly_rent без utilities теперь валиден (ЖКХ опционально)."""
     u = seed_user(client, role="owner")
     apt = client.post(
         "/apartments",
@@ -148,7 +149,9 @@ def test_patch_apartment_fails_with_only_one_baseline_when_db_empty(client):
         headers=auth(u["id"]),
         json={"monthly_rent": 50000},
     )
-    assert r.status_code == 400
+    assert r.status_code == 200
+    assert r.json()["monthly_rent"] == 50000
+    assert r.json()["monthly_utilities"] is None
 
 
 def test_get_apartment_by_id(client):

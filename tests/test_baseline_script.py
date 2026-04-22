@@ -93,6 +93,34 @@ def test_script_month_flag(tmp_path):
     assert months == {"2026-03", "2026-04"}
 
 
+def test_script_without_utilities_generates_only_rent(tmp_path):
+    """Квартира с monthly_rent но без monthly_utilities — только строка rent, без utilities."""
+    db = tmp_path / "t.sqlite3"
+    _init_schema(db)
+    conn = sqlite3.connect(str(db))
+    conn.executescript(
+        """
+        INSERT INTO apartments(title, address, price_per_night, monthly_rent)
+        VALUES ('RentOnly', 'z', 1000, 45000);
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    r = _run_script(db, "--month", "2026-04")
+    assert r.returncode == 0, r.stderr
+
+    conn = sqlite3.connect(str(db))
+    rows = conn.execute(
+        "SELECT category FROM expenses WHERE apartment_id = 1"
+    ).fetchall()
+    conn.close()
+
+    cats = [row[0] for row in rows]
+    assert cats == ["rent"]
+    assert "utilities" not in cats
+
+
 def test_script_dry_run_writes_nothing(tmp_path):
     db = _setup_db(tmp_path)
     r = _run_script(db, "--month", "2026-04", "--dry-run")

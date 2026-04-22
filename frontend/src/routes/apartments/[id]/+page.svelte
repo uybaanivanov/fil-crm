@@ -82,16 +82,13 @@
             baselineErrorField = 'rent';
             return;
         }
-        if (!util || util < 0) {
-            baselineError = 'Укажи ЖКХ';
-            baselineErrorField = 'utilities';
-            return;
-        }
         try {
-            await api.patch(`/apartments/${aptId}`, {
-                monthly_rent: rent,
-                monthly_utilities: util,
-            });
+            const payload = { monthly_rent: rent };
+            if (baselineUtilities !== '' && baselineUtilities !== null) {
+                const u = parseInt(baselineUtilities, 10);
+                if (!isNaN(u) && u >= 0) payload.monthly_utilities = u;
+            }
+            await api.patch(`/apartments/${aptId}`, payload);
             baselineRequired = false;
             editingBaseline = false;
             await load();
@@ -107,7 +104,7 @@
             baselineRequired = false;
         } catch (e) {
             const msg = e?.message || '';
-            if (msg.includes('monthly_rent') || msg.includes('monthly_utilities')) {
+            if (msg.includes('monthly_rent')) {
                 baselineRequired = true;
                 queueMicrotask(() => {
                     baselineBlockEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -221,7 +218,7 @@
 
     {#if baselineRequired}
         <div class="baseline-banner">
-            Сначала заполни обязательные суммы (аренда/ЖКХ) ниже — без них нельзя редактировать другие поля.
+            Сначала заполни аренду в месяц ниже — без неё нельзя редактировать другие поля.
         </div>
     {/if}
     <div bind:this={baselineBlockEl}>
@@ -239,7 +236,7 @@
                         </EditableField>
                         <EditableField
                             label="ЖКХ / мес"
-                            required
+                            required={false}
                             error={baselineErrorField === 'utilities' ? baselineError : null}
                         >
                             <input type="number" bind:value={baselineUtilities} placeholder="₽" />
@@ -263,9 +260,7 @@
                         <span>{apt.monthly_utilities != null ? fmtRub(apt.monthly_utilities) : '— не заполнено'}</span>
                     </div>
                     <button type="button" class="ghost bl-edit" onclick={startEditBaseline}>
-                        {apt.monthly_rent == null || apt.monthly_utilities == null
-                            ? 'Заполнить обязательные'
-                            : 'Изменить'}
+                        {apt.monthly_rent == null ? 'Заполнить аренду' : 'Изменить'}
                     </button>
                 {/if}
             </Card>

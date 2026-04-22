@@ -19,12 +19,15 @@ def run(db_path: Path, month: str, dry_run: bool) -> int:
         conn.execute("PRAGMA foreign_keys = ON")
         apartments = conn.execute(
             "SELECT id, monthly_rent, monthly_utilities FROM apartments "
-            "WHERE monthly_rent IS NOT NULL AND monthly_utilities IS NOT NULL"
+            "WHERE monthly_rent IS NOT NULL"
         ).fetchall()
         created = 0
         skipped = 0
         for apt_id, rent, util in apartments:
-            for category, amount in (("rent", rent), ("utilities", util)):
+            rows = [("rent", rent)]
+            if util is not None:
+                rows.append(("utilities", util))
+            for category, amount in rows:
                 if dry_run:
                     created += 1
                     continue
