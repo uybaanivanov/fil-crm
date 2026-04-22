@@ -10,6 +10,8 @@
     const currentMonth = new Date().toISOString().slice(0, 7);
 
     let data = $state(null);
+    let apartments = $state([]);
+    let filterApt = $state('all'); // 'all' | 'general' | <id as string>
     let error = $state(null);
     let loading = $state(true);
     let addOpen = $state(false);
@@ -24,7 +26,12 @@
     async function load() {
         loading = true;
         try {
-            data = await api.get(`/finance/summary?month=${currentMonth}`);
+            const [summary, apts] = await Promise.all([
+                api.get(`/finance/summary?month=${currentMonth}`),
+                api.get('/apartments')
+            ]);
+            data = summary;
+            apartments = apts;
         } catch (e) {
             error = e.message;
         } finally {
@@ -150,13 +157,48 @@
         </Section>
     {/if}
 
+    <Section title="Фильтр">
+        <div class="wrap">
+            <select class="apt-filter" bind:value={filterApt}>
+                <option value="all">Все</option>
+                <option value="general">Только общие</option>
+                {#each apartments as a}
+                    <option value={String(a.id)}>{a.title}</option>
+                {/each}
+            </select>
+        </div>
+    </Section>
+
+    {#if data.by_apartment?.length}
+        <Section title="По квартирам">
+            <div class="wrap">
+                <Card pad={0}>
+                    {#each data.by_apartment as row, i}
+                        <div class="apt-row" class:last={i === data.by_apartment.length - 1}>
+                            <a class="name" href={`/apartments/${row.apartment_id}`}>{row.title}</a>
+                            <span class="rev">{fmtShortRub(row.revenue)}</span>
+                            <span class="exp">−{fmtShortRub(row.expenses_total)}</span>
+                            <span class="net" class:pos={row.net >= 0} class:neg={row.net < 0}>
+                                {fmtShortRub(row.net)}
+                            </span>
+                        </div>
+                    {/each}
+                </Card>
+            </div>
+        </Section>
+    {/if}
+
     <Section title="Последние движения">
         <div class="wrap">
             {#if data.feed.length === 0}
                 <Card pad={16}><div class="empty">Движений нет</div></Card>
             {:else}
                 <Card pad={0}>
-                    {#each data.feed as item, i}
+                    {#each data.feed.filter(f => {
+                        if (filterApt === 'all') return true;
+                        if (filterApt === 'general') return f.type === 'income' || f.apartment_id == null;
+                        return f.type === 'income' ? false : String(f.apartment_id) === filterApt;
+                    }) as item, i}
                         <div class="feed-row" class:last={i === data.feed.length - 1}>
                             <div class="feed-icon" class:income={item.type === 'income'} class:expense={item.type === 'expense'}>
                                 {item.type === 'income' ? '+' : '−'}
@@ -324,4 +366,29 @@
         color: var(--ink);
     }
     .feed-amt.pos { color: var(--positive); }
+    .apt-filter {
+        width: 100%;
+        height: 36px;
+        padding: 0 10px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--card);
+        color: var(--ink);
+    }
+    .apt-row {
+        display: grid;
+        grid-template-columns: 1fr 80px 80px 80px;
+        gap: 8px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border-soft);
+        align-items: center;
+        font-size: 13px;
+    }
+    .apt-row.last { border-bottom: none; }
+    .apt-row .name { color: var(--ink); text-decoration: none; }
+    .apt-row .rev { color: var(--positive, #2a8); text-align: right; font-family: var(--font-mono); }
+    .apt-row .exp { color: var(--danger, #c33); text-align: right; font-family: var(--font-mono); }
+    .apt-row .net { text-align: right; font-family: var(--font-mono); font-weight: 600; }
+    .apt-row .net.pos { color: var(--positive, #2a8); }
+    .apt-row .net.neg { color: var(--danger, #c33); }
 </style>
