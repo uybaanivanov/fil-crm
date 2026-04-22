@@ -29,6 +29,8 @@
         timer = setTimeout(() => fetchList(q), 200);
     }
 
+    $effect(() => () => { if (timer) clearTimeout(timer); });
+
     $effect(() => {
         if (value && (!selected || selected.id !== value)) {
             api.get(`/apartments/${value}`).then(a => selected = a).catch(() => {});
