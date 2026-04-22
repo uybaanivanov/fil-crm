@@ -1,8 +1,10 @@
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from backend.db import apply_migrations
 from backend.routes import users as users_routes
@@ -30,6 +32,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+_MEDIA_DIR = Path(os.environ.get("FIL_MEDIA_DIR") or (Path(__file__).resolve().parent / "media"))
+_MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/media", StaticFiles(directory=str(_MEDIA_DIR)), name="media")
 
 if os.environ.get("DEBUG"):
     from backend.routes import dev_auth as dev_auth_routes
