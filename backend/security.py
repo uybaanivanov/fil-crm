@@ -3,6 +3,7 @@
 Формат строки: scrypt$<n>$<r>$<p>$<salt_hex>$<hash_hex>
 """
 import hashlib
+import hmac
 import os
 
 
@@ -30,13 +31,4 @@ def verify_password(password: str, stored: str) -> bool:
     except (ValueError, AttributeError):
         return False
     actual = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=n, r=r, p=p, dklen=len(expected))
-    return _const_eq(actual, expected)
-
-
-def _const_eq(a: bytes, b: bytes) -> bool:
-    if len(a) != len(b):
-        return False
-    res = 0
-    for x, y in zip(a, b):
-        res |= x ^ y
-    return res == 0
+    return hmac.compare_digest(actual, expected)
