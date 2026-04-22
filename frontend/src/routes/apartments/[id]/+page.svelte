@@ -8,7 +8,11 @@
     import Section from '$lib/ui/Section.svelte';
     import Chip from '$lib/ui/Chip.svelte';
     import Avatar from '$lib/ui/Avatar.svelte';
-    import { fmtRub, fmtShortRub, fmtDate, fmtNights, fmtMonth } from '$lib/format.js';
+    import CleaningDueDialog from '$lib/ui/CleaningDueDialog.svelte';
+    import {
+        fmtRub, fmtShortRub, fmtDate, fmtNights, fmtMonth,
+        fmtDateTime, defaultCleaningDueAt, datetimeLocalToIso, isoToDatetimeLocal
+    } from '$lib/format.js';
 
     const aptId = $derived(parseInt(page.params.id, 10));
     const currentMonth = new Date().toISOString().slice(0, 7);
@@ -19,6 +23,13 @@
     let clients = $state([]);
     let error = $state(null);
     let loading = $state(true);
+    let dialogOpen = $state(false);
+    let dialogDefault = $state('');
+    let dialogError = $state(null);
+
+    const isOverdue = $derived(
+        apt?.cleaning_due_at && new Date(apt.cleaning_due_at) < new Date()
+    );
 
     async function load() {
         loading = true;
@@ -61,12 +72,23 @@
             error = e.message;
         }
     }
-    async function markDirty() {
+    function openCleaningDialog() {
+        dialogDefault = apt.needs_cleaning && apt.cleaning_due_at
+            ? isoToDatetimeLocal(apt.cleaning_due_at)
+            : defaultCleaningDueAt(currentGuest);
+        dialogError = null;
+        dialogOpen = true;
+    }
+
+    async function submitCleaning(value) {
         try {
-            await api.post(`/apartments/${aptId}/mark-dirty`);
+            await api.post(`/apartments/${aptId}/mark-dirty`, {
+                cleaning_due_at: datetimeLocalToIso(value)
+            });
+            dialogOpen = false;
             await load();
         } catch (e) {
-            error = e.message;
+            dialogError = e.message;
         }
     }
 </script>
@@ -137,17 +159,23 @@
     <Section title="Характеристики">
         <div class="wrap">
             <Card pad={0}>
-                {#each [
+                {@const rows = [
                     ['Тип', apt.rooms || '—'],
                     ['Площадь', apt.area_m2 ? apt.area_m2 + ' м²' : '—'],
                     ['Этаж', apt.floor || '—'],
                     ['Район', apt.district || '—'],
                     ['Цена/ночь', fmtRub(apt.price_per_night)],
-                    ['Нужна уборка', apt.needs_cleaning ? 'Да' : 'Нет']
-                ] as [k, v], i}
-                    <div class="ch-row" class:last={i === 5}>
+                    ['Нужна уборка', apt.needs_cleaning
+                        ? (apt.cleaning_due_at ? 'К ' + fmtDateTime(apt.cleaning_due_at) : 'Да')
+                        : 'Нет']
+                ]}
+                {#each rows as [k, v], i}
+                    <div class="ch-row" class:last={i === rows.length - 1}>
                         <span class="ch-key">{k}</span>
                         <span class="ch-val">{v}</span>
+                        {#if k === 'Нужна уборка' && isOverdue}
+                            <span class="overdue"><Chip tone="late">Просрочено</Chip></span>
+                        {/if}
                     </div>
                 {/each}
             </Card>
@@ -157,11 +185,20 @@
     <!-- Actions -->
     <div class="actions">
         {#if apt.needs_cleaning}
+            <button class="ghost" type="button" onclick={openCleaningDialog}>Изменить время уборки</button>
             <button class="primary" type="button" onclick={markClean}>Закрыть уборку ✓</button>
         {:else}
-            <button class="ghost" type="button" onclick={markDirty}>Пометить грязной</button>
+            <button class="ghost" type="button" onclick={openCleaningDialog}>Требует уборки</button>
         {/if}
     </div>
+
+    <CleaningDueDialog
+        open={dialogOpen}
+        defaultValue={dialogDefault}
+        errorText={dialogError}
+        onSubmit={submitCleaning}
+        onCancel={() => (dialogOpen = false)}
+    />
 {/if}
 
 <style>
@@ -289,4 +326,5 @@
     .primary:hover { background: var(--accent2); }
     .ghost { background: var(--card); color: var(--ink); border: 1px solid var(--border); }
     .ghost:hover { background: var(--card-hi); }
+    .overdue { margin-left: 8px; }
 </style>
