@@ -6,6 +6,7 @@
     import Card from '$lib/ui/Card.svelte';
     import Section from '$lib/ui/Section.svelte';
     import { fmtShortRub, fmtRub, fmtMonth } from '$lib/format.js';
+    import { EXPENSE_CATEGORIES } from '$lib/expenseCategories.js';
 
     const currentMonth = new Date().toISOString().slice(0, 7);
 
@@ -16,12 +17,11 @@
     let loading = $state(true);
     let addOpen = $state(false);
     let addAmount = $state('');
-    let addCategory = $state('Уборка');
+    let addCategory = $state('other');
     let addDescription = $state('');
     let addDate = $state(new Date().toISOString().slice(0, 10));
+    let addApartmentId = $state(''); // '' = общий
     let addError = $state(null);
-
-    const CATS = ['Уборка', 'ЖКХ', 'Ремонт', 'Комиссии', 'Прочее'];
 
     async function load() {
         loading = true;
@@ -51,11 +51,13 @@
                 amount,
                 category: addCategory,
                 description: addDescription || null,
-                occurred_at: addDate
+                occurred_at: addDate,
+                apartment_id: addApartmentId === '' ? null : parseInt(addApartmentId, 10),
             });
             addOpen = false;
             addAmount = '';
             addDescription = '';
+            addApartmentId = '';
             await load();
         } catch (e) {
             addError = e.message;
@@ -96,7 +98,18 @@
                 <label class="fl">
                     <span>Категория</span>
                     <select bind:value={addCategory}>
-                        {#each CATS as c}<option value={c}>{c}</option>{/each}
+                        {#each EXPENSE_CATEGORIES as c}
+                            <option value={c.value}>{c.label}</option>
+                        {/each}
+                    </select>
+                </label>
+                <label class="fl">
+                    <span>Квартира</span>
+                    <select bind:value={addApartmentId}>
+                        <option value="">Общий расход</option>
+                        {#each apartments as a}
+                            <option value={String(a.id)}>{a.title}</option>
+                        {/each}
                     </select>
                 </label>
                 <label class="fl full">
