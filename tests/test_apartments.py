@@ -66,6 +66,22 @@ def test_get_apartment_returns_baseline_fields(client):
     assert apt["monthly_utilities"] is None
 
 
+def test_create_apartment_with_baseline(client):
+    u = seed_user(client, role="owner")
+    r = client.post(
+        "/apartments",
+        headers=auth(u["id"]),
+        json={
+            "title": "A", "address": "X", "price_per_night": 1000,
+            "monthly_rent": 50000, "monthly_utilities": 7000,
+        },
+    )
+    assert r.status_code == 201
+    body = r.json()
+    assert body["monthly_rent"] == 50000
+    assert body["monthly_utilities"] == 7000
+
+
 def test_get_apartment_by_id(client):
     u = _owner(client)
     created = client.post(

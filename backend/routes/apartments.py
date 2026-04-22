@@ -22,6 +22,8 @@ class ApartmentIn(BaseModel):
     cover_url: str | None = None
     source: str | None = None
     source_url: str | None = None
+    monthly_rent: int | None = Field(default=None, ge=0)
+    monthly_utilities: int | None = Field(default=None, ge=0)
 
 
 class ApartmentPatch(BaseModel):
