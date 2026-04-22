@@ -1,21 +1,12 @@
 // Форматирование чисел, дат, валюты.
 
+import { formatMoney, formatMoneyShort } from '$lib/currency.js';
+
 const MONTHS_SHORT = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
 
-export function fmtRub(n) {
-    if (n === null || n === undefined) return '—';
-    const s = Math.round(Math.abs(n)).toLocaleString('ru-RU').replace(/,/g, ' ');
-    return (n < 0 ? '−' : '') + s + ' ₽';
-}
+export function fmtRub(n) { return formatMoney(n); }
 
-export function fmtShortRub(n) {
-    if (n === null || n === undefined) return '—';
-    const abs = Math.abs(n);
-    const sign = n < 0 ? '−' : '';
-    if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1).replace('.0', '') + 'М ₽';
-    if (abs >= 1_000)     return sign + Math.round(abs / 1_000) + 'к ₽';
-    return sign + abs + ' ₽';
-}
+export function fmtShortRub(n) { return formatMoneyShort(n); }
 
 export function fmtDate(iso) {
     if (!iso) return '';

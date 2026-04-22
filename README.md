@@ -43,6 +43,12 @@ cd frontend && npm run dev -- --port 5173
 uv run --env-file .env scripts/generate_baseline_expenses.py --month 2026-04
 ```
 
+Обновление курсов RUB→USD/VND раз в сутки:
+
+```
+0 6 * * * cd /opt/fil-crm && uv run --env-file .env python scripts/refresh_rates.py
+```
+
 ## Примечания
 
 Это прототип. Аутентификации по паролю нет — юзер просто выбирается из списка. Не для продакшена.

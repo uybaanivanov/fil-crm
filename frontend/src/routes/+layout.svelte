@@ -4,11 +4,14 @@
     import { page } from '$app/state';
     import TabBar from '$lib/ui/TabBar.svelte';
     import { getUser } from '$lib/auth.js';
+    import { api } from '$lib/api.js';
+    import { getCurrency, setCurrency, refreshRatesIfStale, CURRENCIES } from '$lib/currency.js';
     import '../app.css';
 
     let { children } = $props();
     let ready = $state(false);
     let user = $state(null);
+    let cur = $state('RUB');
 
     // Пути, где TabBar скрыт (auth-flow) и guard'ы не действуют
     const PUBLIC = ['/login', '/dev_auth'];
@@ -18,6 +21,8 @@
     }
 
     onMount(() => {
+        cur = getCurrency();
+        refreshRatesIfStale(api);
         user = getUser();
         const path = page.url.pathname;
         if (!user && !isPublic(path)) {
@@ -32,7 +37,15 @@
     });
 
     let showTabs = $derived(user && !isPublic(page.url.pathname));
+
+    function changeCurrency(e) {
+        setCurrency(e.target.value);
+    }
 </script>
+
+<select class="cur-switch" value={cur} onchange={changeCurrency}>
+    {#each CURRENCIES as c}<option value={c}>{c}</option>{/each}
+</select>
 
 {#if ready}
     <div class="app-shell">
@@ -42,3 +55,13 @@
         {#if showTabs}<TabBar />{/if}
     </div>
 {/if}
+
+<style>
+.cur-switch {
+    position: fixed; top: 8px; right: 8px; z-index: 100;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid var(--border, #ccc);
+    border-radius: 6px; padding: 4px 8px;
+    font-size: 12px; cursor: pointer;
+}
+</style>
