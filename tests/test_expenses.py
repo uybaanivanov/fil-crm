@@ -65,3 +65,37 @@ def test_delete_expense(client):
     assert r.status_code == 204
     r = client.get("/expenses", headers=auth(u["id"]))
     assert r.json() == []
+
+
+def test_create_expense_with_apartment_id(client):
+    u = seed_user(client, role="owner")
+    apt = client.post(
+        "/apartments",
+        headers=auth(u["id"]),
+        json={"title": "A", "address": "X", "price_per_night": 1000},
+    ).json()
+    r = client.post(
+        "/expenses",
+        headers=auth(u["id"]),
+        json={
+            "amount": 1500, "category": "internet",
+            "occurred_at": "2026-04-10", "apartment_id": apt["id"],
+        },
+    )
+    assert r.status_code == 201
+    body = r.json()
+    assert body["apartment_id"] == apt["id"]
+    assert body["source"] == "manual"
+
+
+def test_create_expense_with_invalid_apartment_id(client):
+    u = seed_user(client, role="owner")
+    r = client.post(
+        "/expenses",
+        headers=auth(u["id"]),
+        json={
+            "amount": 1500, "category": "x",
+            "occurred_at": "2026-04-10", "apartment_id": 99999,
+        },
+    )
+    assert r.status_code == 400

@@ -12,6 +12,7 @@ class ExpenseIn(BaseModel):
     category: str = Field(min_length=1)
     description: str | None = None
     occurred_at: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    apartment_id: int | None = None
 
 
 class ExpensePatch(BaseModel):
@@ -19,13 +20,28 @@ class ExpensePatch(BaseModel):
     category: str | None = Field(default=None, min_length=1)
     description: str | None = None
     occurred_at: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    apartment_id: int | None = None
 
 
-FIELDS = "id, amount, category, description, occurred_at, created_at"
+FIELDS = (
+    "id, amount, category, description, occurred_at, "
+    "apartment_id, source, created_at"
+)
 
 
 def _row(conn, eid: int):
     return conn.execute(f"SELECT {FIELDS} FROM expenses WHERE id = ?", (eid,)).fetchone()
+
+
+def _assert_apartment_exists(conn, apt_id: int | None):
+    if apt_id is None:
+        return
+    row = conn.execute("SELECT 1 FROM apartments WHERE id = ?", (apt_id,)).fetchone()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Квартира {apt_id} не найдена",
+        )
 
 
 @router.get("")
@@ -53,10 +69,14 @@ def create_expense(
     payload: ExpenseIn, _: dict = Depends(require_role("owner", "admin"))
 ):
     with get_conn() as conn:
+        _assert_apartment_exists(conn, payload.apartment_id)
         cur = conn.execute(
-            "INSERT INTO expenses(amount, category, description, occurred_at) "
-            "VALUES (?, ?, ?, ?)",
-            (payload.amount, payload.category, payload.description, payload.occurred_at),
+            "INSERT INTO expenses(amount, category, description, occurred_at, apartment_id) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (
+                payload.amount, payload.category, payload.description,
+                payload.occurred_at, payload.apartment_id,
+            ),
         )
         row = _row(conn, cur.lastrowid)
     return dict(row)
@@ -71,8 +91,10 @@ def update_expense(
     fields = payload.model_dump(exclude_unset=True)
     if not fields:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Нет полей для обновления")
-    set_clause = ", ".join(f"{k} = ?" for k in fields)
     with get_conn() as conn:
+        if "apartment_id" in fields:
+            _assert_apartment_exists(conn, fields["apartment_id"])
+        set_clause = ", ".join(f"{k} = ?" for k in fields)
         cur = conn.execute(
             f"UPDATE expenses SET {set_clause} WHERE id = ?",
             list(fields.values()) + [eid],
