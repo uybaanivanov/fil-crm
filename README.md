@@ -29,6 +29,20 @@ cd frontend && npm run dev -- --port 5173
 - `db.sqlite3` — БД (создаётся автоматически при первом запуске)
 - `docs/superpowers/` — spec и план реализации
 
+## Cron на проде
+
+Генерация ежемесячных baseline-расходов (аренда/ЖКХ) по квартирам:
+
+```
+0 3 1 * * cd /opt/fil-crm && uv run --env-file .env scripts/generate_baseline_expenses.py >> /var/log/fil-crm/baseline.log 2>&1
+```
+
+Скрипт идемпотентен — повторные запуски не дублируют записи. Догнать пропущенный месяц:
+
+```bash
+uv run --env-file .env scripts/generate_baseline_expenses.py --month 2026-04
+```
+
 ## Примечания
 
 Это прототип. Аутентификации по паролю нет — юзер просто выбирается из списка. Не для продакшена.
