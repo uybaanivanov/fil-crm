@@ -52,6 +52,20 @@ def test_patch_apartment_updates_new_fields(client):
     assert r.json()["district"] == "центр"
 
 
+def test_get_apartment_returns_baseline_fields(client):
+    u = seed_user(client, role="owner")
+    r = client.post(
+        "/apartments",
+        headers=auth(u["id"]),
+        json={"title": "A", "address": "X", "price_per_night": 1000},
+    )
+    apt = r.json()
+    assert "monthly_rent" in apt
+    assert "monthly_utilities" in apt
+    assert apt["monthly_rent"] is None
+    assert apt["monthly_utilities"] is None
+
+
 def test_get_apartment_by_id(client):
     u = _owner(client)
     created = client.post(

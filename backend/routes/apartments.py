@@ -44,7 +44,8 @@ class CleaningDueIn(BaseModel):
 
 SELECT_FIELDS = (
     "id, title, address, price_per_night, needs_cleaning, cleaning_due_at, "
-    "cover_url, rooms, area_m2, floor, district, callsign, source, source_url, created_at"
+    "cover_url, rooms, area_m2, floor, district, callsign, source, source_url, "
+    "monthly_rent, monthly_utilities, created_at"
 )
 
 
