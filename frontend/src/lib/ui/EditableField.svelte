@@ -1,23 +1,20 @@
 <!--
   Обёртка для редактируемого поля.
   Отображает метку сверху и слот с инпутом внутри; под инпутом
-  рисуется пунктирная линия (обычная или primary для required).
+  рисуется пунктирная линия.
 -->
 <script>
     let {
         label,
-        required = false,
+        required = false, // required — оставлен для совместимости, визуально не влияет
         error = null,
         hint = null,
         children,
     } = $props();
 </script>
 
-<label class="field" class:required class:has-error={!!error}>
-    <span class="lbl">
-        {label}
-        {#if required}<span class="req">*</span>{/if}
-    </span>
+<label class="field" class:has-error={!!error}>
+    <span class="lbl">{label}</span>
     <div class="slot">
         {@render children()}
     </div>
@@ -25,8 +22,6 @@
         <span class="err">{error}</span>
     {:else if hint}
         <span class="hint">{hint}</span>
-    {:else if required}
-        <span class="hint">Обязательно для сохранения</span>
     {/if}
 </label>
 
@@ -38,7 +33,6 @@
         padding: 6px 0 4px;
         border-bottom: 1px dashed var(--border);
     }
-    .field.required { border-bottom-color: var(--primary, var(--accent)); }
     .field.has-error { border-bottom-color: var(--danger, #c33); }
     .lbl {
         font-family: var(--font-mono);
@@ -46,7 +40,6 @@
         text-transform: uppercase;
         color: var(--faint);
     }
-    .req { color: var(--primary, var(--accent)); margin-left: 2px; }
     .slot :global(input),
     .slot :global(select) {
         width: 100%;
