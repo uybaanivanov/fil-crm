@@ -336,7 +336,8 @@ async def upload_cover(
     file: UploadFile = File(...),
     _: dict = Depends(require_role("owner", "admin")),
 ):
-    ext = _ALLOWED_COVER_TYPES.get(file.content_type or "")
+    ctype = (file.content_type or "").split(";", 1)[0].strip().lower()
+    ext = _ALLOWED_COVER_TYPES.get(ctype)
     if ext is None:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
@@ -353,13 +354,18 @@ async def upload_cover(
             raise HTTPException(status_code=404, detail="Квартира не найдена")
         target_dir = _media_root() / "apartments" / str(apt_id)
         target_dir.mkdir(parents=True, exist_ok=True)
+        target = target_dir / f"cover.{ext}"
+        # write to temp then atomic-rename, чтобы не остаться без cover при OSError
+        tmp = target.with_suffix(target.suffix + ".tmp")
+        tmp.write_bytes(data)
         for old in target_dir.glob("cover.*"):
+            if old.name == tmp.name:
+                continue
             try:
                 old.unlink()
             except OSError:
                 pass
-        target = target_dir / f"cover.{ext}"
-        target.write_bytes(data)
+        os.replace(tmp, target)
         url = f"/media/apartments/{apt_id}/cover.{ext}"
         conn.execute("UPDATE apartments SET cover_url = ? WHERE id = ?", (url, apt_id))
     return {"cover_url": url}
