@@ -5,7 +5,7 @@
     import PageHead from '$lib/ui/PageHead.svelte';
     import Card from '$lib/ui/Card.svelte';
     import Chip from '$lib/ui/Chip.svelte';
-    import { fmtRub } from '$lib/format.js';
+    import { fmtRub, fmtDateTime } from '$lib/format.js';
 
     let apartments = $state([]);
     let error = $state(null);
@@ -60,8 +60,17 @@
                     <div class="addr-wrap">
                         <div class="title">{a.title}</div>
                         <div class="addr">{a.address}</div>
+                        {#if a.cleaning_due_at}
+                            <div class="due" class:overdue={new Date(a.cleaning_due_at) < new Date()}>
+                                К {fmtDateTime(a.cleaning_due_at)}
+                            </div>
+                        {/if}
                     </div>
-                    <Chip tone="due">Требует уборки</Chip>
+                    {#if a.cleaning_due_at && new Date(a.cleaning_due_at) < new Date()}
+                        <Chip tone="late">Просрочено</Chip>
+                    {:else}
+                        <Chip tone="due">Требует уборки</Chip>
+                    {/if}
                 </div>
                 <div class="meta">
                     {a.rooms || '—'}
@@ -131,4 +140,11 @@
         cursor: pointer;
     }
     .primary:hover { background: var(--accent2); }
+    .due {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 4px;
+    }
+    .due.overdue { color: var(--danger); font-weight: 600; }
 </style>
