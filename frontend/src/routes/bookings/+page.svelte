@@ -7,47 +7,86 @@
     import Chip from '$lib/ui/Chip.svelte';
     import { fmtRub, fmtDateFull, fmtNights } from '$lib/format.js';
 
+    const PAGE_SIZE = 50;
+
     let bookings = $state([]);
     let clients = $state([]);
+    let stats = $state({ active: 0 });
     let error = $state(null);
     let loading = $state(true);
+    let loadingMore = $state(false);
+    let hasMore = $state(false);
+    let offset = $state(0);
     let tab = $state('all');
 
-    const PAGE_SIZE = 50;
-    let visibleCount = $state(PAGE_SIZE);
-
-    function setTab(v) {
-        tab = v;
-        visibleCount = PAGE_SIZE;
+    async function fetchPage(currentTab, currentOffset) {
+        const qs = new URLSearchParams({
+            tab: currentTab,
+            limit: String(PAGE_SIZE),
+            offset: String(currentOffset)
+        });
+        return api.get(`/bookings?${qs}`);
     }
 
-    onMount(async () => {
+    async function loadFirst(t) {
+        loading = true;
+        error = null;
         try {
-            const [b, c] = await Promise.all([
-                api.get('/bookings'),
-                api.get('/clients')
-            ]);
-            bookings = b;
-            clients = c;
+            const items = await fetchPage(t, 0);
+            bookings = items;
+            offset = items.length;
+            hasMore = items.length === PAGE_SIZE;
         } catch (e) {
             error = e.message;
         } finally {
             loading = false;
         }
+    }
+
+    async function loadMore() {
+        if (loadingMore || !hasMore) return;
+        loadingMore = true;
+        try {
+            const items = await fetchPage(tab, offset);
+            bookings = [...bookings, ...items];
+            offset += items.length;
+            hasMore = items.length === PAGE_SIZE;
+        } catch (e) {
+            error = e.message;
+        } finally {
+            loadingMore = false;
+        }
+    }
+
+    function setTab(v) {
+        if (v === tab) return;
+        tab = v;
+        loadFirst(v);
+    }
+
+    onMount(async () => {
+        try {
+            const [c, s] = await Promise.all([api.get('/clients'), api.get('/bookings/stats')]);
+            clients = c;
+            stats = s;
+        } catch {
+            // клиенты/статы не блокируют основной список
+        }
+        loadFirst(tab);
     });
 
     const clientById = $derived(Object.fromEntries(clients.map(c => [c.id, c])));
 
+    // Развёртка броней → события (для таба "Все" каждая бронь превращается в заезд+выезд).
+    // Работает уже на подгруженной странице (бэк вернул максимум PAGE_SIZE броней).
     const events = $derived.by(() => {
         const out = [];
         for (const b of bookings) {
-            if (b.status === 'cancelled' && tab !== 'cancelled') continue;
-            if (tab === 'cancelled' && b.status !== 'cancelled') continue;
-            if (tab === 'check_in')   out.push({ ...b, kind: 'check_in', date: b.check_in });
-            else if (tab === 'check_out') out.push({ ...b, kind: 'check_out', date: b.check_out });
-            else if (tab === 'cancelled') out.push({ ...b, kind: 'cancelled', date: b.check_in });
+            if (tab === 'check_in')        out.push({ ...b, kind: 'check_in',  date: b.check_in });
+            else if (tab === 'check_out')  out.push({ ...b, kind: 'check_out', date: b.check_out });
+            else if (tab === 'cancelled')  out.push({ ...b, kind: 'cancelled', date: b.check_in });
             else {
-                out.push({ ...b, kind: 'check_in', date: b.check_in });
+                out.push({ ...b, kind: 'check_in',  date: b.check_in });
                 out.push({ ...b, kind: 'check_out', date: b.check_out });
             }
         }
@@ -55,12 +94,9 @@
         return out;
     });
 
-    const visibleEvents = $derived(events.slice(0, visibleCount));
-    const hasMore = $derived(events.length > visibleCount);
-
     const groups = $derived.by(() => {
         const g = new Map();
-        for (const e of visibleEvents) {
+        for (const e of events) {
             if (!g.has(e.date)) g.set(e.date, []);
             g.get(e.date).push(e);
         }
@@ -90,7 +126,7 @@
     ]);
 </script>
 
-<PageHead title="Брони" sub="{bookings.filter(b => b.status === 'active').length} активных">
+<PageHead title="Брони" sub="{stats.active} активных">
     {#snippet right()}
         <AddBtn onclick={() => goto('/bookings/new')} />
     {/snippet}
@@ -155,16 +191,12 @@
     {/each}
     {#if hasMore}
         <div class="more">
-            <button
-                class="more-btn"
-                type="button"
-                onclick={() => (visibleCount += PAGE_SIZE)}
-            >
-                Показать ещё · {events.length - visibleCount} осталось
+            <button class="more-btn" type="button" disabled={loadingMore} onclick={loadMore}>
+                {loadingMore ? 'Загружаю…' : 'Показать ещё'}
             </button>
         </div>
-    {:else if events.length > PAGE_SIZE}
-        <div class="more-done">Всё · {events.length}</div>
+    {:else if bookings.length > PAGE_SIZE}
+        <div class="more-done">Всё · {bookings.length}</div>
     {/if}
 {/if}
 

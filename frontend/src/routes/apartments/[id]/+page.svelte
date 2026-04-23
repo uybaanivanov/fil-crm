@@ -50,12 +50,12 @@
             const [a, s, b, c] = await Promise.all([
                 api.get(`/apartments/${aptId}`),
                 api.get(`/apartments/${aptId}/stats?month=${currentMonth}`),
-                api.get('/bookings'),
+                api.get(`/bookings?apartment_id=${aptId}`),
                 api.get('/clients')
             ]);
             apt = a;
             stats = s;
-            bookings = b.filter(bb => bb.apartment_id === aptId);
+            bookings = b;
             clients = c;
         } catch (e) {
             error = e.message;

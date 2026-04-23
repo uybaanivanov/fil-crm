@@ -69,24 +69,86 @@ def _row(conn, booking_id: int):
     ).fetchone()
 
 
+_TABS = {"all", "check_in", "check_out", "cancelled"}
+
+
 @router.get("")
-def list_bookings(_: dict = Depends(require_role("owner", "admin"))):
+def list_bookings(
+    _: dict = Depends(require_role("owner", "admin")),
+    tab: str | None = Query(default=None),
+    limit: int | None = Query(default=None, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    apartment_id: int | None = Query(default=None),
+):
+    """Список броней.
+
+    Без параметров — отдаёт всё (обратная совместимость для страниц, которые
+    агрегируют по всему датасету: /clients).
+
+    С `tab` + `limit` — серверная пагинация под /bookings:
+      - all / check_in: status != cancelled, сорт по check_in DESC
+      - check_out:      status != cancelled, сорт по check_out DESC
+      - cancelled:      status  = cancelled, сорт по check_in DESC
+    """
+    where = []
+    params: list = []
+    order_by = "b.check_in DESC"
+
+    if tab is not None:
+        if tab not in _TABS:
+            raise HTTPException(status_code=400, detail=f"tab должен быть одним из {sorted(_TABS)}")
+        if tab == "cancelled":
+            where.append("b.status = 'cancelled'")
+        else:
+            where.append("b.status != 'cancelled'")
+        if tab == "check_out":
+            order_by = "b.check_out DESC"
+
+    if apartment_id is not None:
+        where.append("b.apartment_id = ?")
+        params.append(apartment_id)
+
+    sql = f"""
+        SELECT b.id, b.apartment_id, b.client_id, b.check_in, b.check_out,
+               b.total_price, b.status, b.notes, b.created_at,
+               a.title AS apartment_title,
+               a.cover_url AS apartment_cover_url,
+               a.callsign AS apartment_callsign,
+               c.full_name AS client_name
+        FROM bookings b
+        JOIN apartments a ON a.id = b.apartment_id
+        JOIN clients c ON c.id = b.client_id
+        {"WHERE " + " AND ".join(where) if where else ""}
+        ORDER BY {order_by}
+    """
+    if limit is not None:
+        sql += " LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
     with get_conn() as conn:
-        rows = conn.execute(
-            """
-            SELECT b.id, b.apartment_id, b.client_id, b.check_in, b.check_out,
-                   b.total_price, b.status, b.notes, b.created_at,
-                   a.title AS apartment_title,
-                   a.cover_url AS apartment_cover_url,
-                   a.callsign AS apartment_callsign,
-                   c.full_name AS client_name
-            FROM bookings b
-            JOIN apartments a ON a.id = b.apartment_id
-            JOIN clients c ON c.id = b.client_id
-            ORDER BY b.check_in DESC
-            """
-        ).fetchall()
+        rows = conn.execute(sql, params).fetchall()
     return [dict(r) for r in rows]
+
+
+@router.get("/stats")
+def bookings_stats(_: dict = Depends(require_role("owner", "admin"))):
+    with get_conn() as conn:
+        row = conn.execute(
+            """
+            SELECT
+                SUM(CASE WHEN status = 'active'    THEN 1 ELSE 0 END) AS active,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+                COUNT(*) AS total
+            FROM bookings
+            """
+        ).fetchone()
+    return {
+        "active":    row["active"]    or 0,
+        "cancelled": row["cancelled"] or 0,
+        "completed": row["completed"] or 0,
+        "total":     row["total"]     or 0,
+    }
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
