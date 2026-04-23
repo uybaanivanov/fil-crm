@@ -78,3 +78,14 @@ export function isoToDatetimeLocal(iso) {
     if (!iso) return '';
     return iso.length >= 16 ? iso.slice(0, 16) : iso;
 }
+
+// Сокращённый адрес для шахматки. "ул. Петра Алексеева, 50, кв. 34" → "Петра Алексеева, 50".
+export function shortAddress(addr) {
+    if (!addr) return '';
+    let s = addr;
+    s = s.replace(/^(ул\.?|улица|пр\.?|проспект|пер\.?|переулок|пл\.?|площадь|ш\.?|шоссе|б-р|бульвар)\s+/i, '');
+    s = s.replace(/,?\s*(кв\.?|квартира)\s*\d+\S*/i, '');
+    s = s.replace(/,?\s*(под\.?|подъезд)\s*\d+/i, '');
+    s = s.replace(/\s+/g, ' ').trim();
+    return s;
+}
