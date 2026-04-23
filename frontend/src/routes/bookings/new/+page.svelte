@@ -10,6 +10,7 @@
     import Avatar from '$lib/ui/Avatar.svelte';
     import ApartmentPicker from '$lib/ui/ApartmentPicker.svelte';
     import { fmtRub, fmtNights } from '$lib/format.js';
+    import { BOOKING_SOURCES } from '$lib/sources.js';
 
     // Quick-param support: /bookings/new?client_id=N&apartment_id=M
     const preClientId = $derived(parseInt(page.url.searchParams.get('client_id') || '', 10) || null);
@@ -26,13 +27,13 @@
     let checkOut = $state('');
     let totalPrice = $state('');
     let notes = $state('');
+    let bookingSource = $state('');
     let clientQuery = $state('');
 
     // Inline client creation
     let createOpen = $state(false);
     let newName = $state('');
     let newPhone = $state('');
-    let newSource = $state('Прямая');
 
     onMount(async () => {
         try {
@@ -83,8 +84,7 @@
         try {
             const c = await api.post('/clients', {
                 full_name: newName,
-                phone: newPhone,
-                source: newSource || null
+                phone: newPhone
             });
             clients = [...clients, c];
             clientId = c.id;
@@ -101,6 +101,7 @@
         if (!apartmentId) return (error = 'Выбери квартиру');
         if (!clientId) return (error = 'Выбери гостя');
         if (!checkIn || !checkOut) return (error = 'Укажи даты');
+        if (!bookingSource) return (error = 'Выбери источник');
         const price = parseInt(totalPrice, 10);
         if (!price || price <= 0) return (error = 'Сумма должна быть > 0');
         if (new Date(checkOut) <= new Date(checkIn)) return (error = 'Выезд должен быть позже заезда');
@@ -113,6 +114,7 @@
                 check_in: checkIn,
                 check_out: checkOut,
                 total_price: price,
+                source: bookingSource,
                 notes: notes || null
             });
             goto(`/bookings/${result.id}`);
@@ -195,19 +197,23 @@
                     <div class="create-form">
                         <label><span>Имя</span><input bind:value={newName} /></label>
                         <label><span>Телефон</span><input bind:value={newPhone} /></label>
-                        <label>
-                            <span>Источник</span>
-                            <select bind:value={newSource}>
-                                <option>Доска.якт</option>
-                                <option>Юла</option>
-                                <option>Прямая</option>
-                            </select>
-                        </label>
                         <button class="primary small" type="button" onclick={createClient}>Добавить</button>
                     </div>
                 </Card>
             {/if}
         {/if}
+    </div>
+</Section>
+
+<!-- Источник брони -->
+<Section title="Источник">
+    <div class="wrap">
+        <select class="source-sel" bind:value={bookingSource}>
+            <option value="" disabled>Выбрать канал…</option>
+            {#each BOOKING_SOURCES as src}
+                <option value={src}>{src}</option>
+            {/each}
+        </select>
     </div>
 </Section>
 
@@ -415,4 +421,16 @@
     .primary:disabled { opacity: 0.5; cursor: not-allowed; }
     .ghost { background: var(--card); color: var(--ink); border: 1px solid var(--border); }
     .ghost:hover { background: var(--card-hi); }
+
+    .source-sel {
+        width: 100%;
+        height: 42px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0 10px;
+        color: var(--ink);
+        font-size: 14px;
+        font-family: inherit;
+    }
 </style>
