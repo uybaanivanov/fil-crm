@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { api } from '$lib/api.js';
+    import { shortAddress } from '$lib/format.js';
     import PageHead from '$lib/ui/PageHead.svelte';
 
     let apartments = $state([]);
@@ -23,12 +24,14 @@
 
     onMount(async () => {
         try {
-            const [apts, cal] = await Promise.all([
-                api.get('/apartments'),
-                api.get(`/bookings/calendar?from=${from}&to=${to}`)
-            ]);
-            apartments = apts;
+            const cal = await api.get(`/bookings/calendar?from=${from}&to=${to}`);
             calendar = cal;
+            apartments = cal.map(c => ({
+                id: c.apartment_id,
+                title: c.apartment_title,
+                callsign: c.apartment_callsign,
+                address: c.apartment_address,
+            }));
         } catch (e) {
             error = e.message;
         } finally {
@@ -45,7 +48,6 @@
         return entry ? entry.bookings : [];
     }
 
-    // position: days from `from` date
     function startCol(b) {
         const ci = new Date(b.check_in);
         const start = new Date(from);
@@ -87,12 +89,8 @@
             <!-- rows -->
             {#each apartments as a, ai}
                 <div class="row">
-                    <div class="name-col" title={a.title}>
-                        {#if a.callsign}
-                            <span class="cs">{a.callsign}</span>
-                        {:else}
-                            {a.title}
-                        {/if}
+                    <div class="name-col" title={a.address || a.title}>
+                        {shortAddress(a.address) || a.title}
                     </div>
                     {#each days as d, i}
                         {@const dt = d.toISOString().slice(0, 10)}
@@ -216,10 +214,4 @@
     }
     .leg-item { display: inline-flex; align-items: center; gap: 5px; }
     .leg-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
-    .cs {
-        font-family: var(--font-mono);
-        color: var(--accent);
-        font-weight: 600;
-        font-size: 11px;
-    }
 </style>
