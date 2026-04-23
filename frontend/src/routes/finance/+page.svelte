@@ -214,18 +214,43 @@
                         if (filterApt === 'general') return f.type === 'income' || f.apartment_id == null;
                         return f.type === 'income' ? false : String(f.apartment_id) === filterApt;
                     }) as item, i}
-                        <div class="feed-row" class:last={i === data.feed.length - 1}>
-                            <div class="feed-icon" class:income={item.type === 'income'} class:expense={item.type === 'expense'}>
-                                {item.type === 'income' ? '+' : '−'}
+                        {@const targetHref = item.ref?.booking_id
+                            ? `/bookings/${item.ref.booking_id}`
+                            : (item.ref?.expense_id && item.apartment_id
+                                ? `/apartments/${item.apartment_id}`
+                                : null)}
+                        {#if targetHref}
+                            <button
+                                class="feed-row clickable"
+                                class:last={i === data.feed.length - 1}
+                                type="button"
+                                onclick={() => goto(targetHref)}
+                            >
+                                <div class="feed-icon" class:income={item.type === 'income'} class:expense={item.type === 'expense'}>
+                                    {item.type === 'income' ? '+' : '−'}
+                                </div>
+                                <div class="feed-body">
+                                    <div class="feed-label">{item.label}</div>
+                                    <div class="feed-date">{item.dt}</div>
+                                </div>
+                                <div class="feed-amt" class:pos={item.type === 'income'}>
+                                    {item.type === 'income' ? '+' : '−'} {fmtShortRub(item.amount)}
+                                </div>
+                            </button>
+                        {:else}
+                            <div class="feed-row" class:last={i === data.feed.length - 1}>
+                                <div class="feed-icon" class:income={item.type === 'income'} class:expense={item.type === 'expense'}>
+                                    {item.type === 'income' ? '+' : '−'}
+                                </div>
+                                <div class="feed-body">
+                                    <div class="feed-label">{item.label}</div>
+                                    <div class="feed-date">{item.dt}</div>
+                                </div>
+                                <div class="feed-amt" class:pos={item.type === 'income'}>
+                                    {item.type === 'income' ? '+' : '−'} {fmtShortRub(item.amount)}
+                                </div>
                             </div>
-                            <div class="feed-body">
-                                <div class="feed-label">{item.label}</div>
-                                <div class="feed-date">{item.dt}</div>
-                            </div>
-                            <div class="feed-amt" class:pos={item.type === 'income'}>
-                                {item.type === 'income' ? '+' : '−'} {fmtShortRub(item.amount)}
-                            </div>
-                        </div>
+                        {/if}
                     {/each}
                 </Card>
             {/if}
@@ -351,8 +376,19 @@
         align-items: center;
         gap: 12px;
         border-bottom: 1px solid var(--border-soft);
+        width: 100%;
+        box-sizing: border-box;
+        background: transparent;
+        border-top: none;
+        border-left: none;
+        border-right: none;
+        text-align: left;
+        font: inherit;
+        color: inherit;
     }
     .feed-row.last { border-bottom: none; }
+    .feed-row.clickable { cursor: pointer; }
+    .feed-row.clickable:hover { background: var(--card-hi); }
     .feed-icon {
         width: 30px;
         height: 30px;
