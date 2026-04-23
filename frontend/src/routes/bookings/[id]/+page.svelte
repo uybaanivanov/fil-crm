@@ -9,10 +9,14 @@
     import Section from '$lib/ui/Section.svelte';
     import Chip from '$lib/ui/Chip.svelte';
     import Avatar from '$lib/ui/Avatar.svelte';
+    import ContractModal from '$lib/ui/ContractModal.svelte';
     import { fmtRub, fmtDate, fmtDateFull, fmtNights } from '$lib/format.js';
 
     const me = getUser();
     const canDelete = me?.role === 'owner';
+    const canMakeContract = me?.role === 'owner' || me?.role === 'admin';
+
+    let contractOpen = $state(false);
 
     const bookingId = $derived(parseInt(page.params.id, 10));
 
@@ -176,6 +180,16 @@
         </Section>
     {/if}
 
+    {#if canMakeContract}
+        <Section title="Договор">
+            <div class="wrap">
+                <button class="contract-btn" type="button" onclick={() => contractOpen = true}>
+                    Сделать договор
+                </button>
+            </div>
+        </Section>
+    {/if}
+
     <!-- Actions -->
     <div class="actions">
         {#if booking.status === 'active'}
@@ -193,6 +207,8 @@
             </button>
         </div>
     {/if}
+
+    <ContractModal open={contractOpen} onClose={() => contractOpen = false} />
 {/if}
 
 <style>
@@ -347,5 +363,21 @@
     }
     .danger:hover {
         background: var(--danger-bg);
+    }
+    .contract-btn {
+        width: 100%;
+        height: 44px;
+        background: var(--card);
+        color: var(--ink);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+    }
+    .contract-btn:hover {
+        background: var(--card-hi);
+        border-color: var(--accent);
     }
 </style>
