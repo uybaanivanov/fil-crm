@@ -270,7 +270,7 @@ def bookings_calendar(
 ):
     with get_conn() as conn:
         apartments = conn.execute(
-            "SELECT id, title, callsign FROM apartments ORDER BY id"
+            "SELECT id, title, callsign, address FROM apartments ORDER BY id"
         ).fetchall()
         bookings = conn.execute(
             """
@@ -289,6 +289,7 @@ def bookings_calendar(
             "apartment_id": a["id"],
             "apartment_title": a["title"],
             "apartment_callsign": a["callsign"],
+            "apartment_address": a["address"],
             "bookings": [],
         }
         for a in apartments

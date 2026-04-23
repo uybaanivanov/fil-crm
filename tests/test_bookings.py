@@ -64,6 +64,7 @@ def test_bookings_calendar_returns_groups(client):
     body = r.json()
     assert isinstance(body, list)
     apt_entry = next(e for e in body if e["apartment_id"] == a["id"])
+    assert apt_entry["apartment_address"] == "addr"
     assert len(apt_entry["bookings"]) == 1
     assert apt_entry["bookings"][0]["status"] == "active"
 
