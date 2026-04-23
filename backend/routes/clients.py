@@ -13,20 +13,18 @@ router = APIRouter(prefix="/clients", tags=["clients"])
 class ClientIn(BaseModel):
     full_name: str = Field(min_length=1)
     phone: str = Field(min_length=1)
-    source: str | None = None
     notes: str | None = None
 
 
 class ClientPatch(BaseModel):
     full_name: str | None = Field(default=None, min_length=1)
     phone: str | None = Field(default=None, min_length=1)
-    source: str | None = None
     notes: str | None = None
 
 
 def _row(conn, client_id: int):
     return conn.execute(
-        "SELECT id, full_name, phone, source, notes, created_at FROM clients WHERE id = ?",
+        "SELECT id, full_name, phone, notes, created_at FROM clients WHERE id = ?",
         (client_id,),
     ).fetchone()
 
@@ -35,7 +33,7 @@ def _row(conn, client_id: int):
 def list_clients(_: dict = Depends(require_role("owner", "admin"))):
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT id, full_name, phone, source, notes, created_at FROM clients ORDER BY id"
+            "SELECT id, full_name, phone, notes, created_at FROM clients ORDER BY id"
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -46,8 +44,8 @@ def create_client(
 ):
     with get_conn() as conn:
         cur = conn.execute(
-            "INSERT INTO clients (full_name, phone, source, notes) VALUES (?, ?, ?, ?)",
-            (payload.full_name, payload.phone, payload.source, payload.notes),
+            "INSERT INTO clients (full_name, phone, notes) VALUES (?, ?, ?)",
+            (payload.full_name, payload.phone, payload.notes),
         )
         row = _row(conn, cur.lastrowid)
     return dict(row)
