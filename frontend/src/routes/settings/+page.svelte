@@ -8,15 +8,23 @@
     import Chevron from '$lib/ui/Chevron.svelte';
     import { getUser, clearUser } from '$lib/auth.js';
     import { getTheme, setTheme } from '$lib/theme.js';
+    import { getCurrency, setCurrency, CURRENCIES } from '$lib/currency.js';
     import { fmtRole } from '$lib/format.js';
 
     let user = $state(null);
     let theme = $state('dark');
+    let currency = $state('RUB');
 
     onMount(() => {
         user = getUser();
         theme = getTheme();
+        currency = getCurrency();
     });
+
+    function chooseCurrency(code) {
+        currency = code;
+        setCurrency(code); // внутри — location.reload, формат подтянется во всём аппе
+    }
 
     function choose(t) {
         theme = t;
@@ -98,6 +106,25 @@
         </div>
     </Section>
 
+    <!-- Валюта -->
+    <Section title="Валюта">
+        <div class="wrap">
+            <Card pad={14}>
+                <div class="cur-head">
+                    <div class="lbl">Отображение сумм</div>
+                    <div class="hint">Курсы обновляются раз в день</div>
+                </div>
+                <div class="seg cur-seg">
+                    {#each CURRENCIES as code}
+                        <button class="seg-btn" class:active={currency === code} type="button" onclick={() => chooseCurrency(code)}>
+                            {code}
+                        </button>
+                    {/each}
+                </div>
+            </Card>
+        </div>
+    </Section>
+
     <!-- Выход -->
     <div class="wrap">
         <button class="logout" onclick={logout} type="button">Выйти</button>
@@ -167,6 +194,8 @@
         grid-template-columns: 1fr 1fr;
         gap: 6px;
     }
+    .cur-head { margin-bottom: 12px; }
+    .cur-seg { grid-template-columns: repeat(3, 1fr); }
     .seg-btn {
         padding: 8px 0;
         background: transparent;
