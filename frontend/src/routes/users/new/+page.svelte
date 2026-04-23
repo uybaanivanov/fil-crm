@@ -92,7 +92,6 @@
     .pass { display: flex; gap: 6px; }
     .pass input { flex: 1; }
     .pass button { font-size: 11px; padding: 0 8px; background: transparent; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
-    .primary { padding: 10px; background: var(--ink); color: #fff; border: none; border-radius: 8px; cursor: pointer; }
     .primary:disabled { opacity: 0.5; }
     .err { font-size: 12px; color: #c33; }
     .error-banner { padding: 12px; color: #c33; }
