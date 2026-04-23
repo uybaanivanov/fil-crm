@@ -85,7 +85,7 @@
 </script>
 
 <PageHead title={booking ? `Бронь #${booking.id}` : 'Бронь'}
-    sub={booking ? (client?.source || 'Без источника') : ''}
+    sub={booking ? (booking.source || 'Без источника') : ''}
     back="Брони" backOnClick={() => goto('/bookings')} />
 
 {#if error}
@@ -98,6 +98,9 @@
         <Card pad={14}>
             <div class="chip-row">
                 <Chip tone={statusTone(booking.status)}>{statusLabel(booking.status)}</Chip>
+                {#if booking.source}
+                    <Chip tone="info">{booking.source}</Chip>
+                {/if}
                 <span class="nights">{fmtNights(booking.check_in, booking.check_out)}</span>
             </div>
             <div class="dates">
