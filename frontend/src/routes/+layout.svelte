@@ -27,22 +27,27 @@
 
     // Перечитываем сессию на каждой навигации — лэйаут в SPA не перемонтируется,
     // так что onMount после login→goto не сработает и TabBar остаётся скрыт.
+    // Важно: работаем с локальной `u`, в $state `user` только пишем. Если читать user
+    // в этом же эффекте — self-dep → effect_update_depth_exceeded.
     $effect(() => {
         const path = page.url.pathname;
-        user = getUser();
-        if (!user && !isPublic(path)) {
+        const u = getUser();
+        if (!u && !isPublic(path)) {
+            user = null;
             ready = true;
             goto('/login');
             return;
         }
-        if (user && path === '/login') {
-            goto(user.role === 'maid' ? '/cleaning' : '/');
+        if (u && path === '/login') {
+            user = u;
+            goto(u.role === 'maid' ? '/cleaning' : '/');
             return;
         }
-        if (user && !ratesRefreshed) {
+        if (u && !ratesRefreshed) {
             ratesRefreshed = true;
             refreshRatesIfStale(api);
         }
+        user = u;
         ready = true;
     });
 
