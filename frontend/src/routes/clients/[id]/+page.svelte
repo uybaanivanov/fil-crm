@@ -54,7 +54,6 @@
                 <div class="top-body">
                     <div class="name">{data.full_name}</div>
                     <div class="phone">{data.phone}</div>
-                    {#if data.source}<div class="src">источник: {data.source}</div>{/if}
                 </div>
             </div>
             <div class="stats">
@@ -140,7 +139,6 @@
     .top-body { flex: 1; min-width: 0; }
     .name { font-family: var(--font-serif); font-size: 22px; color: var(--ink); letter-spacing: -0.3px; }
     .phone { font-family: var(--font-mono); font-size: 11px; color: var(--faint); margin-top: 4px; }
-    .src { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
 
     .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
     .stat { text-align: center; padding: 10px 0; background: var(--bg-subtle); border-radius: 6px; }
