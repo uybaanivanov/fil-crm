@@ -209,10 +209,10 @@
                             <div class="guest-phone">{currentGuest.client?.phone || ''}</div>
                         </div>
                     </button>
-                    <div class="guest-range">
+                    <button class="guest-range" type="button" onclick={() => goto(`/bookings/${currentGuest.booking.id}`)}>
                         <span>{fmtDate(currentGuest.booking.check_in)} → {fmtDate(currentGuest.booking.check_out)}</span>
                         <span class="guest-sum">{fmtNights(currentGuest.booking.check_in, currentGuest.booking.check_out)} · {fmtRub(currentGuest.booking.total_price)}</span>
-                    </div>
+                    </button>
                 </Card>
             </div>
         </Section>
@@ -473,16 +473,27 @@
     .guest-name { font-size: 15px; font-weight: 600; color: var(--ink); }
     .guest-phone { font-family: var(--font-mono); font-size: 11px; color: var(--faint); margin-top: 2px; }
     .guest-range {
+        width: 100%;
+        margin-top: 12px;
+        padding: 10px 12px;
+        background: transparent;
+        border: none;
+        border-top: 1px solid var(--border-soft);
         display: flex;
         justify-content: space-between;
-        padding: 10px 12px;
-        background: var(--bg-subtle);
-        border-radius: 6px;
+        align-items: center;
+        cursor: pointer;
+        text-align: left;
+        color: var(--ink);
+        font-size: 13px;
+        font-family: inherit;
+    }
+    .guest-range:hover { background: var(--card-hi); }
+    .guest-sum {
         font-family: var(--font-mono);
         font-size: 11px;
-        color: var(--muted);
+        color: var(--faint);
     }
-    .guest-sum { color: var(--ink); font-weight: 600; }
 
     .ch-row {
         display: flex;
