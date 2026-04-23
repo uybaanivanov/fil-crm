@@ -66,3 +66,63 @@ def test_bookings_calendar_returns_groups(client):
     apt_entry = next(e for e in body if e["apartment_id"] == a["id"])
     assert len(apt_entry["bookings"]) == 1
     assert apt_entry["bookings"][0]["status"] == "active"
+
+
+def test_create_booking_with_source(client):
+    u, a, c = _prep(client)
+    r = client.post(
+        "/bookings",
+        headers=auth(u["id"]),
+        json={
+            "apartment_id": a["id"],
+            "client_id": c["id"],
+            "check_in": "2026-04-21",
+            "check_out": "2026-04-24",
+            "total_price": 12840,
+            "source": "Авито",
+        },
+    )
+    assert r.status_code == 201
+    body = r.json()
+    assert body["source"] == "Авито"
+
+
+def test_get_booking_returns_source(client):
+    u, a, c = _prep(client)
+    b = client.post(
+        "/bookings",
+        headers=auth(u["id"]),
+        json={
+            "apartment_id": a["id"],
+            "client_id": c["id"],
+            "check_in": "2026-04-21",
+            "check_out": "2026-04-24",
+            "total_price": 12840,
+            "source": "Островок",
+        },
+    ).json()
+    r = client.get(f"/bookings/{b['id']}", headers=auth(u["id"]))
+    assert r.status_code == 200
+    assert r.json()["source"] == "Островок"
+
+
+def test_patch_booking_source(client):
+    u, a, c = _prep(client)
+    b = client.post(
+        "/bookings",
+        headers=auth(u["id"]),
+        json={
+            "apartment_id": a["id"],
+            "client_id": c["id"],
+            "check_in": "2026-04-21",
+            "check_out": "2026-04-24",
+            "total_price": 12840,
+        },
+    ).json()
+    r = client.patch(
+        f"/bookings/{b['id']}",
+        headers=auth(u["id"]),
+        json={"source": "Суточно.ру"},
+    )
+    assert r.status_code == 200
+    assert r.json()["source"] == "Суточно.ру"

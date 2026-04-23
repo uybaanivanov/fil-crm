@@ -19,6 +19,7 @@ class BookingIn(BaseModel):
     check_in: date
     check_out: date
     total_price: int = Field(gt=0)
+    source: str | None = None
     notes: str | None = None
 
     @model_validator(mode="after")
@@ -35,6 +36,7 @@ class BookingPatch(BaseModel):
     check_out: date | None = None
     total_price: int | None = Field(default=None, gt=0)
     status: str | None = None
+    source: str | None = None
     notes: str | None = None
 
 
@@ -55,7 +57,7 @@ def _row(conn, booking_id: int):
     return conn.execute(
         """
         SELECT b.id, b.apartment_id, b.client_id, b.check_in, b.check_out,
-               b.total_price, b.status, b.notes, b.created_at,
+               b.total_price, b.status, b.source, b.notes, b.created_at,
                a.title AS apartment_title,
                a.cover_url AS apartment_cover_url,
                a.callsign AS apartment_callsign,
@@ -110,7 +112,7 @@ def list_bookings(
 
     sql = f"""
         SELECT b.id, b.apartment_id, b.client_id, b.check_in, b.check_out,
-               b.total_price, b.status, b.notes, b.created_at,
+               b.total_price, b.status, b.source, b.notes, b.created_at,
                a.title AS apartment_title,
                a.cover_url AS apartment_cover_url,
                a.callsign AS apartment_callsign,
@@ -166,14 +168,15 @@ def create_booking(
                     detail=f"Даты пересекаются с бронью #{conflict}",
                 )
             cur = conn.execute(
-                "INSERT INTO bookings (apartment_id, client_id, check_in, check_out, total_price, notes) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO bookings (apartment_id, client_id, check_in, check_out, total_price, source, notes) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     payload.apartment_id,
                     payload.client_id,
                     ci,
                     co,
                     payload.total_price,
+                    payload.source,
                     payload.notes,
                 ),
             )
