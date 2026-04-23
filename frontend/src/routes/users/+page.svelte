@@ -61,7 +61,7 @@
             <Card pad={0}>
                 {#each users as u, i}
                     <div class="row" class:last={i === users.length - 1}>
-                        <Avatar name={u.full_name} size={38} accent={u.role === 'owner' ? 'var(--ink)' : null} />
+                        <Avatar name={u.full_name} size={38} role={u.role} accent={u.role === 'owner' ? 'var(--ink)' : null} />
                         <div class="body">
                             <div class="name">
                                 {u.full_name}

@@ -53,7 +53,7 @@
             {#each users as u}
                 <li>
                     <button onclick={() => pick(u)} class="user" type="button">
-                        <Avatar name={u.full_name} size={40} accent="var(--ink)" />
+                        <Avatar name={u.full_name} size={40} role={u.role} accent="var(--ink)" />
                         <div class="body">
                             <div class="name">{u.full_name}</div>
                             <div class="role">{fmtRole(u.role)}</div>

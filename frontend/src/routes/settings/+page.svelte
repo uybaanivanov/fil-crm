@@ -53,7 +53,7 @@
         <!-- Профиль -->
         <Card pad={14}>
             <div class="profile">
-                <Avatar name={user.full_name} size={56} accent="var(--ink)" />
+                <Avatar name={user.full_name} size={56} role={user.role} accent="var(--ink)" />
                 <div class="profile-body">
                     <div class="name">{user.full_name}</div>
                     <div class="email">#{user.id} · {fmtRole(user.role)}</div>
