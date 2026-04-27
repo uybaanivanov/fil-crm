@@ -3,6 +3,7 @@
     import { goto } from '$app/navigation';
     import { api, ApiError, isDevPickerAvailable } from '$lib/api.js';
     import { setUser } from '$lib/auth.js';
+    import { DEMO } from '$lib/demo.js';
 
     let devAvailable = $state(false);
     let username = $state('');
@@ -12,6 +13,10 @@
     let error = $state(null);
 
     onMount(async () => {
+        if (DEMO) {
+            goto('/dev_auth');
+            return;
+        }
         devAvailable = await isDevPickerAvailable();
     });
 
