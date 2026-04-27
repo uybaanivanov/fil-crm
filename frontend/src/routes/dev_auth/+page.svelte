@@ -5,6 +5,7 @@
     import { setUser } from '$lib/auth.js';
     import Avatar from '$lib/ui/Avatar.svelte';
     import { fmtRole } from '$lib/format.js';
+    import { DEMO } from '$lib/demo.js';
 
     let users = $state([]);
     let loading = $state(true);
@@ -37,9 +38,17 @@
 
 <div class="page">
     <header class="head">
-        <button class="back" onclick={() => goto('/login')} type="button">← Назад</button>
-        <h1 class="title">Dev picker</h1>
-        <div class="sub">Вход без пароля — только локально</div>
+        {#if !DEMO}
+            <button class="back" onclick={() => goto('/login')} type="button">← Назад</button>
+        {/if}
+        <h1 class="title">{DEMO ? 'Демо' : 'Dev picker'}</h1>
+        <div class="sub">
+            {#if DEMO}
+                Выбери роль чтобы войти. Изменения видны только тебе и не сохраняются после ресета базы.
+            {:else}
+                Вход без пароля — только локально
+            {/if}
+        </div>
     </header>
 
     {#if loading}
