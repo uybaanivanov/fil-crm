@@ -2,6 +2,7 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import TabBar from '$lib/ui/TabBar.svelte';
+    import DemoBadge from '$lib/ui/DemoBadge.svelte';
     import { getUser } from '$lib/auth.js';
     import { api } from '$lib/api.js';
     import { refreshRatesIfStale } from '$lib/currency.js';
@@ -51,6 +52,7 @@
 
 {#if ready}
     <div class="app-shell">
+        <DemoBadge />
         <main class="app-main">
             {@render children?.()}
         </main>
