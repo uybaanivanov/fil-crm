@@ -53,7 +53,9 @@ app.include_router(reports_routes.router)
 app.include_router(expenses_routes.router)
 app.include_router(finance_routes.router)
 app.include_router(currency_routes.router)
-app.include_router(auth_login_routes.router)
+
+if not os.environ.get("FIL_DEV_AUTH_ONLY"):
+    app.include_router(auth_login_routes.router)
 
 
 @app.get("/health")
