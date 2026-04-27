@@ -5,6 +5,7 @@
     import { getUser } from '$lib/auth.js';
     import { api } from '$lib/api.js';
     import { refreshRatesIfStale } from '$lib/currency.js';
+    import { DEMO } from '$lib/demo.js';
     import '../app.css';
 
     let { children } = $props();
@@ -29,7 +30,7 @@
         if (!u && !isPublic(path)) {
             user = null;
             ready = true;
-            goto('/login');
+            goto(DEMO ? '/dev_auth' : '/login');
             return;
         }
         if (u && path === '/login') {
