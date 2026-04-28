@@ -10,6 +10,7 @@
     import { getTheme, setTheme } from '$lib/theme.js';
     import { getCurrency, setCurrency, CURRENCIES } from '$lib/currency.js';
     import { fmtRole } from '$lib/format.js';
+    import { DEMO } from '$lib/demo.js';
 
     let user = $state(null);
     let theme = $state('dark');
@@ -33,7 +34,7 @@
 
     function logout() {
         clearUser();
-        goto('/login');
+        goto(DEMO ? '/dev_auth' : '/login');
     }
 
     // Лаунчер на остальные экраны
