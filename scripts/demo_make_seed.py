@@ -72,12 +72,19 @@ RULES = {
     },
     "apartments": {
         "address": lambda i, _: fake_address(i),
+        "title": lambda i, cur: f"Квартира {i} — посуточная аренда",
+        "source_url": lambda *_: None,
+        "apt_number": lambda i, _: str((i % 200) + 1),
+        "entrance": lambda i, _: str((i % 5) + 1),
         "intercom_code": lambda *_: "0000",
         "safe_code": lambda *_: "0000",
         "utility_account": lambda *_: "",
     },
     "bookings": {
         "notes": lambda *_: "",
+    },
+    "expenses": {
+        "description": lambda *_: "",
     },
 }
 
