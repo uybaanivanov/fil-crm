@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Старт demo-инстанса fil-crm. Полный аналог start.sh, но:
 # - tmux session: fil-crm-demo
-# - порт: 8001
+# - порт: 8002
 # - env: .env.demo
 # - worker НЕ запускается (никаких внешних дёрганий)
 # - при первом запуске копирует фикстур БД и медиа
@@ -36,7 +36,7 @@ fi
 
 tmux new-session -d -s "$SESSION" -n backend -c "$ROOT"
 tmux send-keys -t "$SESSION:backend" \
-    "uv run --env-file .env.demo uvicorn backend.main:app --port 8001" C-m
+    "uv run --env-file .env.demo uvicorn backend.main:app --port 8002" C-m
 
-echo "Demo tmux '$SESSION' запущен: backend :8001 (worker отключён)."
+echo "Demo tmux '$SESSION' запущен: backend :8002 (worker отключён)."
 echo "Подключиться: tmux attach -t $SESSION"
